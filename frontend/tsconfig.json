@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "es2020",
+      "dom",
+      "dom.iterable"
+    ],
+    "target": "es2020",
+    "useDefineForClassFields": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
