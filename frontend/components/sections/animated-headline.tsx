@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react'
 
 const WORDS = [
+  'Coders',
   'Data Analysts',
   'Code Writers',
-  'Problem Solvers',
-  'Data Explorers',
-  'Future Builders',
+  'Doctors',
+  'Youtubers',
+  'Engineers',
+  'Programmer',
 ]
 
 export function AnimatedWord() {
-  const [index, setIndex]     = useState(0)
+  const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
