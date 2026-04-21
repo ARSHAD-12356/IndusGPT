@@ -247,21 +247,17 @@ export default function Dashboard() {
                     responseText = "Sorry, I couldn't generate the image right now."
                 }
             } else {
-                // Send to Gemini for regular text chat
-                const apiMessages = newMessages.map(msg => ({
-                    role: msg.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.content }]
-                }))
-
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        contents: apiMessages
-                    })
-                })
+                // Send to Render Backend for regular text chat
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ message: userMsg }),
+                    }
+                );
 
                 if (!response.ok) {
                     const errorData = await response.text()
@@ -269,7 +265,7 @@ export default function Dashboard() {
                 }
                 
                 const data = await response.json()
-                responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received."
+                responseText = data.response || "No response received."
             }
             
             const finalMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, { 
@@ -286,10 +282,10 @@ export default function Dashboard() {
                 }).catch(err => console.error('Failed to save messages:', err))
             }
         } catch (error) {
-            console.error("Gemini API Error:", error)
+            console.error("Backend API Error:", error)
             const errorMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, { 
                 role: 'assistant', 
-                content: "I'm sorry, I encountered an error. Please verify the API key or try again." 
+                content: "Something went wrong" 
             }]
             setMessages(errorMessages)
 

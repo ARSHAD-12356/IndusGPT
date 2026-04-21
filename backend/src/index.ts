@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import path from "path";
 import imageRoutes from "./routes/imageRoutes";
 
-// Load environment variables
+// Load env variables
 dotenv.config();
 
 const app = express();
@@ -13,9 +13,7 @@ const PORT = process.env.PORT || 5000;
 // =====================
 // MIDDLEWARE
 // =====================
-app.use(cors({
-  origin: "*",
-}));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 // =====================
@@ -24,7 +22,7 @@ app.use(express.json());
 app.use("/images", express.static(path.join(__dirname, "../public/images")));
 
 // =====================
-// ROOT ROUTE (FIX NOT FOUND ISSUE)
+// ROOT ROUTE
 // =====================
 app.get("/", (req: Request, res: Response) => {
   res.send("🚀 IndusGPT Backend is Live!");
@@ -42,30 +40,65 @@ app.get("/api/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
     message: "IndusGPT Backend is running",
-    timestamp: new Date()
+    timestamp: new Date(),
   });
 });
 
 // =====================
-// AI CHAT ENDPOINT
+// AI CHAT ENDPOINT (GEMINI)
 // =====================
-app.post("/api/chat", (req: Request, res: Response) => {
+app.post("/api/chat", async (req: Request, res: Response) => {
   const { message } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: "Message is required" });
   }
 
-  res.json({
-    id: Date.now(),
-    userMessage: message,
-    response: `🤖 You said: "${message}" (AI integration coming soon 🚀)`,
-    timestamp: new Date()
-  });
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "GEMINI_API_KEY not set" });
+    }
+
+    const aiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: message }],
+            },
+          ],
+        }),
+      }
+    );
+
+    const data: any = await aiRes.json();
+
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "No response from AI";
+
+    res.json({
+      id: Date.now(),
+      userMessage: message,
+      response: reply,
+      timestamp: new Date(),
+    });
+
+  } catch (error) {
+    console.error("AI ERROR:", error);
+    res.status(500).json({ error: "AI request failed" });
+  }
 });
 
 // =====================
-// ERROR HANDLING
+// ERROR HANDLER
 // =====================
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Error:", err.stack);
@@ -78,7 +111,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: "Route not found",
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 
