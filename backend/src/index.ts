@@ -55,7 +55,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
 
     if (!apiKey) {
       console.error("❌ GEMINI_API_KEY is not defined in process.env");
@@ -66,7 +66,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     }
 
     const aiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
