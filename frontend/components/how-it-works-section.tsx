@@ -28,11 +28,11 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative py-28 bg-[#07070f] overflow-hidden">
+    <section id="how-it-works" className="relative pt-16 pb-28 bg-[#07070f] overflow-hidden">
       {/* Decorative background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/10 to-transparent pointer-events-none" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8">
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
@@ -50,19 +50,19 @@ export function HowItWorksSection() {
           {STEPS.map((step, i) => (
             <div key={step.title} className="flex flex-col lg:flex-row items-center flex-1">
               {/* Card */}
-              <div className="group flex-1 w-full flex flex-col gap-4 p-7 rounded-2xl border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:border-white/15 relative overflow-hidden">
+              <div className="group flex-1 w-full flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:border-white/15 relative overflow-hidden">
                 {/* Step number - subtle background */}
-                <span className="absolute top-4 right-5 text-5xl font-black text-white/[0.04] select-none leading-none">{step.step}</span>
+                <span className="absolute top-4 right-5 text-6xl font-black text-white/[0.04] select-none leading-none">{step.step}</span>
 
                 {/* Icon */}
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg`}>
-                  <step.icon size={22} className="text-white" />
+                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg`}>
+                  <step.icon size={26} className="text-white" />
                 </div>
 
                 {/* Text */}
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-1.5">{step.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
+                  <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+                  <p className="text-base text-gray-400 leading-relaxed">{step.desc}</p>
                 </div>
               </div>
 

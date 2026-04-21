@@ -48,39 +48,51 @@ const PROMPTS = [
 
 export function FloatingCards() {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [displayedText, setDisplayedText] = useState('')
-  const [isTyping, setIsTyping] = useState(true)
-  const [showDots, setShowDots] = useState(false)
+  const [displayedPrompt, setDisplayedPrompt] = useState('')
+  const [displayedResponse, setDisplayedResponse] = useState('')
+  const [phase, setPhase] = useState<'TYPING_PROMPT' | 'PAUSE_AFTER_PROMPT' | 'THINKING' | 'TYPING_RESPONSE' | 'PAUSED'>('TYPING_PROMPT')
 
   const currentPrompt = PROMPTS[currentIndex]
 
   // Typing animation with thinking dots
   useEffect(() => {
-    if (!isTyping) {
-      const timer = setTimeout(() => {
+    let timer: NodeJS.Timeout
+
+    if (phase === 'TYPING_PROMPT') {
+      if (displayedPrompt.length < currentPrompt.prompt.length) {
+        timer = setTimeout(() => {
+          setDisplayedPrompt((prev) => prev + currentPrompt.prompt[displayedPrompt.length])
+        }, 30) // type prompt faster
+      } else {
+        setPhase('PAUSE_AFTER_PROMPT')
+      }
+    } else if (phase === 'PAUSE_AFTER_PROMPT') {
+      timer = setTimeout(() => {
+        setPhase('THINKING')
+      }, 500)
+    } else if (phase === 'THINKING') {
+      timer = setTimeout(() => {
+        setPhase('TYPING_RESPONSE')
+      }, 1000) // thinking duration
+    } else if (phase === 'TYPING_RESPONSE') {
+      if (displayedResponse.length < currentPrompt.response.length) {
+        timer = setTimeout(() => {
+          setDisplayedResponse((prev) => prev + currentPrompt.response[displayedResponse.length])
+        }, 15) // Faster typing for premium feel
+      } else {
+        setPhase('PAUSED')
+      }
+    } else if (phase === 'PAUSED') {
+      timer = setTimeout(() => {
         setCurrentIndex((prev) => (prev + 1) % PROMPTS.length)
-        setDisplayedText('')
-        setIsTyping(true)
-        setShowDots(false)
+        setDisplayedPrompt('')
+        setDisplayedResponse('')
+        setPhase('TYPING_PROMPT')
       }, 3000) // 3 second pause between prompts
-      return () => clearTimeout(timer)
     }
 
-    if (isTyping) {
-      if (displayedText.length < currentPrompt.response.length) {
-        const timer = setTimeout(() => {
-          if (!showDots) {
-            setShowDots(true) // Show thinking dots on first character
-          }
-          setDisplayedText((prev) => prev + currentPrompt.response[displayedText.length])
-        }, 15) // Faster typing for premium feel
-        return () => clearTimeout(timer)
-      } else {
-        setIsTyping(false)
-        setShowDots(false)
-      }
-    }
-  }, [displayedText, isTyping, currentPrompt.response, currentIndex, showDots])
+    return () => clearTimeout(timer)
+  }, [phase, displayedPrompt, displayedResponse, currentPrompt, currentIndex])
 
   return (
     <div className="relative h-[500px] w-full flex items-center justify-end perspective">
@@ -100,12 +112,15 @@ export function FloatingCards() {
               <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">AI Prompt</span>
             </div>
             <p className="text-white text-sm font-medium leading-relaxed">
-              {currentPrompt.prompt}
+              {displayedPrompt}
+              {phase === 'TYPING_PROMPT' && (
+                <span className="inline-block w-1 h-4 ml-0.5 bg-white animate-pulse" />
+              )}
             </p>
           </div>
 
           {/* Thinking dots - shows before typing starts */}
-          {showDots && isTyping && displayedText.length === 0 && (
+          {phase === 'THINKING' && (
             <div className="relative z-10 flex items-center gap-2 mb-4">
               <span className="text-xs text-gray-400">Thinking</span>
               <div className="flex gap-1.5">
@@ -118,8 +133,8 @@ export function FloatingCards() {
 
           {/* Typing animation response */}
           <div className="relative z-10 text-gray-200 text-sm leading-relaxed min-h-20 font-light whitespace-pre-wrap">
-            <span>{displayedText}</span>
-            {isTyping && displayedText.length > 0 && (
+            <span>{displayedResponse}</span>
+            {phase === 'TYPING_RESPONSE' && (
               <span className="inline-block w-1 h-4 ml-0.5 bg-blue-400 animate-pulse" />
             )}
           </div>
