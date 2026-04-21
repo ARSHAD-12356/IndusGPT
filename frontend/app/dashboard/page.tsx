@@ -995,9 +995,14 @@ export default function Dashboard() {
                                     </div>
                                 ))}
                                 {isTyping && (
-                                    <div className="flex justify-start animate-pulse">
-                                        <div className="max-w-[80%] p-4 rounded-2xl text-muted-foreground text-sm">
-                                            IndusGPT is thinking...
+                                    <div className="flex justify-start items-center gap-3 animate-slide-up mb-6">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+                                            <Sparkles size={16} className="text-white" />
+                                        </div>
+                                        <div className="bg-accent border border-border px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-1.5 shadow-sm">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-typing-dot" style={{ animationDelay: '0s' }} />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-typing-dot" style={{ animationDelay: '0.2s' }} />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-typing-dot" style={{ animationDelay: '0.4s' }} />
                                         </div>
                                     </div>
                                 )}
