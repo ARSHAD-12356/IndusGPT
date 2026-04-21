@@ -45,7 +45,7 @@ app.get("/api/health", (req: Request, res: Response) => {
 });
 
 // =====================
-// AI CHAT ENDPOINT (IMPROVED ERROR LOGGING)
+// AI CHAT ENDPOINT (OPENROUTER)
 // =====================
 app.post("/api/chat", async (req: Request, res: Response) => {
   const { message } = req.body;
@@ -55,45 +55,43 @@ app.post("/api/chat", async (req: Request, res: Response) => {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
     if (!apiKey) {
-      console.error("❌ GEMINI_API_KEY is not defined in process.env");
+      console.error("❌ OPENROUTER_API_KEY is not defined");
       return res.status(500).json({ 
         role: "assistant", 
-        content: "❌ Configuration Error: GEMINI_API_KEY is missing on Render." 
+        content: "❌ Configuration Error: OPENROUTER_API_KEY is missing on Render." 
       });
     }
 
-    const aiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] }),
-      }
-    );
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://indusgpt.vercel.app", // Optional, for OpenRouter rankings
+        "X-Title": "IndusGPT", // Optional
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        "model": "google/gemini-2.0-flash-001", // You can change this to any model
+        "messages": [
+          { "role": "user", "content": message }
+        ],
+      })
+    });
 
-    const data: any = await aiRes.json();
+    const data: any = await response.json();
 
-    // Agar Gemini error return karta hai (e.g. Invalid Key, Quota Exceeded)
     if (data.error) {
-      console.error("Gemini API Error Detail:", JSON.stringify(data.error, null, 2));
+      console.error("OpenRouter API Error:", data.error);
       return res.status(500).json({ 
         role: "assistant", 
-        content: `⚠️ Gemini API Error: ${data.error.message} (Code: ${data.error.code})` 
+        content: `⚠️ OpenRouter Error: ${data.error.message || "Unknown error"}` 
       });
     }
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!reply) {
-      console.error("Unexpected Gemini Response Structure:", JSON.stringify(data, null, 2));
-      return res.status(500).json({ 
-        role: "assistant", 
-        content: "⚠️ AI returned an empty response. Please check if your message violates safety guidelines." 
-      });
-    }
+    const reply = data?.choices?.[0]?.message?.content || "⚠️ No response from AI.";
 
     res.json({
       role: "assistant",
