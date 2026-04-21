@@ -224,6 +224,7 @@ export default function Dashboard() {
         setMessage('')
         setHasStarted(true)
         setIsTyping(true)
+        const startTime = Date.now()
 
         const isImageRequest = /(generate|create|make|draw).*image/i.test(userMsg)
 
@@ -300,6 +301,12 @@ export default function Dashboard() {
                 }).catch(err => console.error('Failed to save error messages:', err))
             }
         } finally {
+            // Ensure animation shows for at least 1.5 seconds for natural feel
+            const endTime = Date.now();
+            const elapsed = endTime - startTime;
+            if (elapsed < 1500) {
+                await new Promise(resolve => setTimeout(resolve, 1500 - elapsed));
+            }
             setIsTyping(false)
         }
     }
