@@ -281,11 +281,11 @@ export default function Dashboard() {
                     body: JSON.stringify({ messages: finalMessages })
                 }).catch(err => console.error('Failed to save messages:', err))
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Backend API Error:", error)
             const errorMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, {
                 role: 'assistant',
-                content: "Something went wrong"
+                content: error.message || "Something went wrong"
             }]
             setMessages(errorMessages)
 
