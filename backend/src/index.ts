@@ -74,7 +74,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "google/gemini-2.0-flash-lite-preview-02-05:free", // Latest Free Model
+        "model": "openrouter/free", // Reliable Free Model Router
         "messages": [
           { "role": "user", "content": message }
         ],
