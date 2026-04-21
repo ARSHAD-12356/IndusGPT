@@ -45,7 +45,7 @@ app.get("/api/health", (req: Request, res: Response) => {
 });
 
 // =====================
-// AI CHAT ENDPOINT (FIXED)
+// AI CHAT ENDPOINT (IMPROVED ERROR LOGGING)
 // =====================
 app.post("/api/chat", async (req: Request, res: Response) => {
   const { message } = req.body;
@@ -58,46 +58,53 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      console.log("❌ GEMINI_API_KEY missing");
-      return res.status(500).json({ error: "API key missing" });
+      console.error("❌ GEMINI_API_KEY is not defined in process.env");
+      return res.status(500).json({ 
+        role: "assistant", 
+        content: "❌ Configuration Error: GEMINI_API_KEY is missing on Render." 
+      });
     }
 
     const aiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: message }],
-            },
-          ],
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] }),
       }
     );
 
     const data: any = await aiRes.json();
 
-    console.log("🔍 Gemini Response:", JSON.stringify(data, null, 2));
+    // Agar Gemini error return karta hai (e.g. Invalid Key, Quota Exceeded)
+    if (data.error) {
+      console.error("Gemini API Error Detail:", JSON.stringify(data.error, null, 2));
+      return res.status(500).json({ 
+        role: "assistant", 
+        content: `⚠️ Gemini API Error: ${data.error.message} (Code: ${data.error.code})` 
+      });
+    }
 
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "⚠️ AI did not return a response";
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    // ✅ IMPORTANT: frontend-compatible format
+    if (!reply) {
+      console.error("Unexpected Gemini Response Structure:", JSON.stringify(data, null, 2));
+      return res.status(500).json({ 
+        role: "assistant", 
+        content: "⚠️ AI returned an empty response. Please check if your message violates safety guidelines." 
+      });
+    }
+
     res.json({
       role: "assistant",
       content: reply,
     });
 
-  } catch (error) {
-    console.error("🔥 AI ERROR:", error);
+  } catch (error: any) {
+    console.error("🔥 Server Error:", error);
     res.status(500).json({
       role: "assistant",
-      content: "⚠️ Something went wrong. Try again.",
+      content: `⚠️ Connection Error: ${error.message || "Failed to reach AI server"}`
     });
   }
 });
