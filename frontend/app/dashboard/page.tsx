@@ -228,8 +228,8 @@ export default function Dashboard() {
             let responseText = ""
 
             if (isImageRequest) {
-                // Send to our local image generation backend
-                const response = await fetch("/api/generate-image", {
+                // Send to Render backend for image generation
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-image`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: userMsg })
