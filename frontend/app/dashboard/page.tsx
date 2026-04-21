@@ -154,6 +154,12 @@ export default function Dashboard() {
         } else {
             const parsed = JSON.parse(currentUser)
             setUser(parsed)
+            // Apply theme color
+            if (parsed.themeColor) {
+                document.documentElement.style.setProperty('--primary', parsed.themeColor)
+                document.documentElement.style.setProperty('--accent', parsed.themeColor)
+                document.documentElement.style.setProperty('--ring', parsed.themeColor)
+            }
             // Load chats from DB for this user
             fetch(`/api/chats?userId=${parsed.id}`)
                 .then(r => r.json())

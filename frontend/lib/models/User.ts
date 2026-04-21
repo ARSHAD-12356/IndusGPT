@@ -19,6 +19,22 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please provide a password'],
     },
+    phone: {
+        type: String,
+        default: '',
+    },
+    country: {
+        type: String,
+        default: '',
+    },
+    profilePic: {
+        type: String,
+        default: '',
+    },
+    themeColor: {
+        type: String,
+        default: '#4f46e5', // Default Indigo
+    }
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);
