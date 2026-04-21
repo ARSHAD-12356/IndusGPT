@@ -11,6 +11,9 @@ import {
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
 import { ModeToggle } from '@/components/mode-toggle'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { CodeBlock } from '@/components/chat/code-block'
 // const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
 
 export default function Dashboard() {
@@ -959,7 +962,34 @@ export default function Dashboard() {
                                             ) : msg.content.startsWith('[IMAGE]') ? (
                                                 <img src={msg.content.replace('[IMAGE]', '')} alt="Generated Image" className="max-w-full rounded-lg shadow-lg border border-border" />
                                             ) : (
-                                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                    <ReactMarkdown 
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            code({ node, inline, className, children, ...props }: any) {
+                                                                const match = /language-(\w+)/.exec(className || '')
+                                                                return !inline && match ? (
+                                                                    <CodeBlock
+                                                                        language={match[1]}
+                                                                        value={String(children).replace(/\n$/, '')}
+                                                                    />
+                                                                ) : (
+                                                                    <code className={`${className} bg-accent-foreground/10 px-1.5 py-0.5 rounded-md text-sm font-mono`} {...props}>
+                                                                        {children}
+                                                                    </code>
+                                                                )
+                                                            },
+                                                            p: ({ children }) => <p className="text-sm leading-relaxed mb-4 last:mb-0">{children}</p>,
+                                                            ul: ({ children }) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
+                                                            ol: ({ children }) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
+                                                            li: ({ children }) => <li className="text-sm">{children}</li>,
+                                                            a: ({ href, children }) => <a href={href} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                                                            blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic my-4">{children}</blockquote>,
+                                                        }}
+                                                    >
+                                                        {msg.content}
+                                                    </ReactMarkdown>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
