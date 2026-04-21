@@ -74,7 +74,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "google/gemini-2.0-flash-exp:free", // Free model
+        "model": "meta-llama/llama-3.1-8b-instruct:free", // Reliable Free Model
         "messages": [
           { "role": "user", "content": message }
         ],
