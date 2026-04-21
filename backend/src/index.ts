@@ -74,7 +74,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "meta-llama/llama-3.1-8b-instruct:free", // High-speed Free Model
+        "model": "deepseek/deepseek-chat:free", // High-speed & Reliable Free Model
         "messages": [
           { "role": "user", "content": message }
         ],
