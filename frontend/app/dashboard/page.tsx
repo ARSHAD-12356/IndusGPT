@@ -676,7 +676,7 @@ export default function Dashboard() {
                                 </div>
                             </button>
                             <button 
-                                onClick={() => { localStorage.removeItem('currentUser'); router.push('/login'); }}
+                                onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
                                 className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
                             >
                                 <LogOut size={18} />
@@ -705,22 +705,22 @@ export default function Dashboard() {
                 {!isSidebarOpen && (
                     <div className="mt-auto p-3 flex justify-center w-full relative">
                         {isProfilePopupOpen && (
-                            <div className="absolute bottom-full left-14 w-64 mb-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
-                                <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-white/5 cursor-pointer">
+                            <div className="absolute bottom-full left-14 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                                <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
                                         {user.name.split(' ').map((n: string) => n[0]).join('')}
                                     </div>
                                     <div className="flex-1 text-left truncate">
-                                        <div className="text-sm font-medium text-white truncate">{user.name}</div>
-                                        <div className="text-[10px] text-gray-500 truncate">Go</div>
+                                        <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
+                                        <div className="text-[10px] text-muted-foreground truncate">Go</div>
                                     </div>
                                 </div>
                                 
                                 <div className="h-[1px] bg-border my-1" />
 
                                 <button 
-                                    onClick={() => { localStorage.removeItem('currentUser'); router.push('/login'); }}
-                                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white"
+                                    onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
+                                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     <LogOut size={18} />
                                     <span>Log out</span>
