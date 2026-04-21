@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Plus, Search, Image as ImageIcon, LayoutGrid, Brain, Code, 
-  ChevronDown, User, Settings, LogOut, 
-  Mic, Send, Globe, Sparkles, PencilLine,
-  Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, Archive,
-  PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu
+import {
+    Plus, Search, Image as ImageIcon, LayoutGrid, Brain, Code,
+    ChevronDown, User, Settings, LogOut,
+    Mic, Send, Globe, Sparkles, PencilLine,
+    Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, Archive,
+    PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
 import { ModeToggle } from '@/components/mode-toggle'
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
+// const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
 
 export default function Dashboard() {
     const router = useRouter()
@@ -33,7 +33,7 @@ export default function Dashboard() {
     const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null)
     const [chatSearchQuery, setChatSearchQuery] = useState('')
     const [isChatSearchActive, setIsChatSearchActive] = useState(false)
-    
+
     // Settings Modal State
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
     const [settingsActiveTab, setSettingsActiveTab] = useState('profile')
@@ -234,12 +234,12 @@ export default function Dashboard() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: userMsg })
                 })
-                
+
                 if (!response.ok) {
                     const errText = await response.text()
                     throw new Error(`Backend API returned ${response.status}: ${errText}`)
                 }
-                
+
                 const data = await response.json()
                 if (data.imageUrl) {
                     responseText = "[IMAGE]" + data.imageUrl
@@ -263,14 +263,14 @@ export default function Dashboard() {
                     const errorData = await response.text()
                     throw new Error(`API returned ${response.status}: ${errorData}`)
                 }
-                
+
                 const data = await response.json()
-                responseText = data.response || "No response received."
+                responseText = data.content || "No response received."
             }
-            
-            const finalMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, { 
-                role: 'assistant', 
-                content: responseText 
+
+            const finalMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, {
+                role: 'assistant',
+                content: responseText
             }]
             setMessages(finalMessages)
 
@@ -283,9 +283,9 @@ export default function Dashboard() {
             }
         } catch (error) {
             console.error("Backend API Error:", error)
-            const errorMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, { 
-                role: 'assistant', 
-                content: "Something went wrong" 
+            const errorMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, {
+                role: 'assistant',
+                content: "Something went wrong"
             }]
             setMessages(errorMessages)
 
@@ -314,7 +314,7 @@ export default function Dashboard() {
         setIsMobileSidebarOpen(false);
         setSearchQuery('');
         setIsSearchOpen(false);
-        
+
         // Use cached messages if available for instant display
         if (chat.messages && chat.messages.length > 0) {
             setMessages(chat.messages);
@@ -330,14 +330,14 @@ export default function Dashboard() {
         try {
             const res = await fetch(`/api/chats/${chat._id}`);
             const data = await res.json();
-            
+
             if (data.chat) {
                 const fetchedMessages = data.chat.messages || [];
                 setMessages(fetchedMessages);
                 setHasStarted(fetchedMessages.length > 0);
-                
+
                 // Update the main chats state to cache these messages
-                setChats(prev => prev.map(c => 
+                setChats(prev => prev.map(c =>
                     c._id === chat._id ? { ...c, messages: fetchedMessages } : c
                 ));
             }
@@ -403,15 +403,15 @@ export default function Dashboard() {
 
     return (
         <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
-            
+
             {/* ─── Sidebar Overlay (Mobile) ─── */}
             {isMobileSidebarOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] lg:hidden animate-fade-in"
                     onClick={() => setIsMobileSidebarOpen(false)}
                 />
             )}
-            
+
             {/* ─── Sidebar ─── */}
             <aside className={`
                 flex flex-col bg-sidebar border-r border-border transition-all duration-300 shrink-0
@@ -421,7 +421,7 @@ export default function Dashboard() {
             `}>
                 {/* Close Button Mobile */}
                 <div className="lg:hidden absolute top-4 right-4 z-[80]">
-                    <button 
+                    <button
                         onClick={() => setIsMobileSidebarOpen(false)}
                         className="p-2 rounded-lg bg-accent text-muted-foreground hover:text-foreground transition-colors"
                     >
@@ -432,16 +432,16 @@ export default function Dashboard() {
                 <div className={`p-3 w-full ${isSidebarOpen ? 'space-y-1' : 'flex flex-col gap-3 items-center'}`}>
                     {isSidebarOpen ? (
                         <div className="flex items-center gap-2 w-full">
-                            <button 
+                            <button
                                 onClick={() => setIsNewChatModalOpen(true)}
                                 className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm font-medium group"
                             >
-                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
-                                <Plus size={16} className="text-white" />
-                              </div>
-                              <span className="truncate text-foreground">New chat</span>
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
+                                    <Plus size={16} className="text-white" />
+                                </div>
+                                <span className="truncate text-foreground">New chat</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsSidebarOpen(false)}
                                 className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white shrink-0 transition-colors"
                             >
@@ -449,20 +449,20 @@ export default function Dashboard() {
                             </button>
                         </div>
                     ) : (
-                        <button 
+                        <button
                             onClick={() => setIsSidebarOpen(true)}
                             className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <PanelLeft size={18} />
                         </button>
                     )}
-                    
+
                     {isSidebarOpen ? (
                         <div className="relative w-full">
                             {isChatSearchActive ? (
                                 <div className="flex items-center gap-2 w-full px-3 py-1.5 rounded-xl bg-accent border border-border animate-fade-in">
                                     <Search size={16} className="text-muted-foreground shrink-0" />
-                                    <input 
+                                    <input
                                         autoFocus
                                         type="text"
                                         value={chatSearchQuery}
@@ -475,7 +475,7 @@ export default function Dashboard() {
                                     </button>
                                 </div>
                             ) : (
-                                <button 
+                                <button
                                     onClick={() => setIsChatSearchActive(true)}
                                     className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
                                 >
@@ -486,13 +486,13 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <>
-                            <button 
+                            <button
                                 onClick={() => setIsNewChatModalOpen(true)}
                                 className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-2"
                             >
                                 <PencilLine size={18} />
                             </button>
-                            <button 
+                            <button
                                 onClick={() => { setIsSidebarOpen(true); setIsChatSearchActive(true); }}
                                 className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                             >
@@ -508,194 +508,194 @@ export default function Dashboard() {
                 {isSidebarOpen && (
                     <>
                         {/* Primary Tabs */}
-                <div className="px-3 py-4 space-y-0.5 overflow-y-auto flex-1">
-                    {[
-                        { icon: <ImageIcon size={18} />, label: "Images" },
-                        { icon: <Brain size={18} />, label: "Deep research" },
-                        { icon: <LayoutGrid size={18} />, label: "Projects" },
-                    ].map((item) => (
-                        <button key={item.label} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                            {item.icon}
-                            <span>{item.label}</span>
-                        </button>
-                    ))}
+                        <div className="px-3 py-4 space-y-0.5 overflow-y-auto flex-1">
+                            {[
+                                { icon: <ImageIcon size={18} />, label: "Images" },
+                                { icon: <Brain size={18} />, label: "Deep research" },
+                                { icon: <LayoutGrid size={18} />, label: "Projects" },
+                            ].map((item) => (
+                                <button key={item.label} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                    {item.icon}
+                                    <span>{item.label}</span>
+                                </button>
+                            ))}
 
-                    <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">Recents</div>
-                    {chats
-                        .filter(chat => chat.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
-                        .map((chat) => (
-                        <div key={chat._id} className="relative group">
-                            {editingChatId === chat._id ? (
-                                <div className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm bg-accent`}>
-                                    <input 
-                                        type="text"
-                                        value={editingChatName}
-                                        onChange={(e) => setEditingChatName(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleEditChatSave(e, chat._id)}
-                                        className="flex-1 bg-transparent text-foreground outline-none min-w-0"
-                                        autoFocus
-                                    />
-                                    <button onClick={(e) => handleEditChatSave(e, chat._id)} className="text-green-400 hover:text-green-300">
-                                        <Check size={14} />
-                                    </button>
-                                    <button onClick={handleEditChatCancel} className="text-red-400 hover:text-red-300">
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button 
-                                    onClick={() => handleChatSelect(chat)}
-                                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg transition-colors text-sm ${activeChat?._id === chat._id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
-                                >
-                                    <span className="truncate pr-2 text-left flex-1">{chat.name}</span>
-                                    
-                                    <div className={`${activeDropdownId === chat._id ? 'flex' : 'hidden group-hover:flex'} items-center shrink-0 relative`}>
-                                        <div 
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setActiveDropdownId(activeDropdownId === chat._id ? null : chat._id)
-                                            }}
-                                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            <MoreHorizontal size={14} />
-                                        </div>
-
-                                        {activeDropdownId === chat._id && (
-                                            <div 
-                                                className="absolute right-0 bottom-full mb-1 w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                    <Share size={14} />
-                                                    <span>Share</span>
-                                                </div>
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                    <Users size={14} />
-                                                    <span>Start a group chat</span>
-                                                </div>
-                                                <div 
-                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
-                                                    onClick={(e) => {
-                                                        setActiveDropdownId(null)
-                                                        handleEditChatStart(e, chat)
-                                                    }}
-                                                >
-                                                    <Edit2 size={14} />
-                                                    <span>Rename</span>
-                                                </div>
-                                                
-                                                <div className="h-[1px] bg-border my-1 mx-2" />
-                                                
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                    <Pin size={14} />
-                                                    <span>Pin chat</span>
-                                                </div>
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                    <Archive size={14} />
-                                                    <span>Archive</span>
-                                                </div>
-                                                
-                                                <div className="h-[1px] bg-border my-1 mx-2" />
-                                                
-                                                <div 
-                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-accent cursor-pointer transition-colors"
-                                                    onClick={(e) => {
-                                                        setActiveDropdownId(null)
-                                                        handleDeleteChat(e, chat._id)
-                                                    }}
-                                                >
-                                                    <Trash2 size={14} />
-                                                    <span>Delete</span>
-                                                </div>
+                            <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">Recents</div>
+                            {chats
+                                .filter(chat => chat.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                                .map((chat) => (
+                                    <div key={chat._id} className="relative group">
+                                        {editingChatId === chat._id ? (
+                                            <div className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm bg-accent`}>
+                                                <input
+                                                    type="text"
+                                                    value={editingChatName}
+                                                    onChange={(e) => setEditingChatName(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleEditChatSave(e, chat._id)}
+                                                    className="flex-1 bg-transparent text-foreground outline-none min-w-0"
+                                                    autoFocus
+                                                />
+                                                <button onClick={(e) => handleEditChatSave(e, chat._id)} className="text-green-400 hover:text-green-300">
+                                                    <Check size={14} />
+                                                </button>
+                                                <button onClick={handleEditChatCancel} className="text-red-400 hover:text-red-300">
+                                                    <X size={14} />
+                                                </button>
                                             </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleChatSelect(chat)}
+                                                className={`flex items-center justify-between w-full px-3 py-2 rounded-lg transition-colors text-sm ${activeChat?._id === chat._id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
+                                            >
+                                                <span className="truncate pr-2 text-left flex-1">{chat.name}</span>
+
+                                                <div className={`${activeDropdownId === chat._id ? 'flex' : 'hidden group-hover:flex'} items-center shrink-0 relative`}>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setActiveDropdownId(activeDropdownId === chat._id ? null : chat._id)
+                                                        }}
+                                                        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                                    >
+                                                        <MoreHorizontal size={14} />
+                                                    </div>
+
+                                                    {activeDropdownId === chat._id && (
+                                                        <div
+                                                            className="absolute right-0 bottom-full mb-1 w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
+                                                                <Share size={14} />
+                                                                <span>Share</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
+                                                                <Users size={14} />
+                                                                <span>Start a group chat</span>
+                                                            </div>
+                                                            <div
+                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                                onClick={(e) => {
+                                                                    setActiveDropdownId(null)
+                                                                    handleEditChatStart(e, chat)
+                                                                }}
+                                                            >
+                                                                <Edit2 size={14} />
+                                                                <span>Rename</span>
+                                                            </div>
+
+                                                            <div className="h-[1px] bg-border my-1 mx-2" />
+
+                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
+                                                                <Pin size={14} />
+                                                                <span>Pin chat</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
+                                                                <Archive size={14} />
+                                                                <span>Archive</span>
+                                                            </div>
+
+                                                            <div className="h-[1px] bg-border my-1 mx-2" />
+
+                                                            <div
+                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-accent cursor-pointer transition-colors"
+                                                                onClick={(e) => {
+                                                                    setActiveDropdownId(null)
+                                                                    handleDeleteChat(e, chat._id)
+                                                                }}
+                                                            >
+                                                                <Trash2 size={14} />
+                                                                <span>Delete</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
                                         )}
                                     </div>
-                                </button>
+                                ))}
+                            {chats.length === 0 && (
+                                <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">No recent chats</div>
                             )}
                         </div>
-                    ))}
-                    {chats.length === 0 && (
-                        <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">No recent chats</div>
-                    )}
-                </div>
 
-                {/* Bottom Profile */}
-                <div className="p-3 border-t border-border relative w-full">
-                    {isProfilePopupOpen && (
-                        <div className="absolute bottom-full left-3 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
-                            {/* Profile Info */}
-                            <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
+                        {/* Bottom Profile */}
+                        <div className="p-3 border-t border-border relative w-full">
+                            {isProfilePopupOpen && (
+                                <div className="absolute bottom-full left-3 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                                    {/* Profile Info */}
+                                    <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
+                                            {user.name.split(' ').map((n: string) => n[0]).join('')}
+                                        </div>
+                                        <div className="flex-1 text-left truncate">
+                                            <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
+                                            <div className="text-[10px] text-muted-foreground truncate">Go</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="h-[1px] bg-white/5 my-1" />
+
+                                    <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                        <Plus size={18} />
+                                        <span>Add another account</span>
+                                    </button>
+
+                                    <div className="h-[1px] bg-border my-1" />
+
+                                    <button onClick={() => openSettings('upgrade')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                        <Sparkles size={18} />
+                                        <span>Upgrade plan</span>
+                                    </button>
+                                    <button onClick={() => openSettings('personalization')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                        <PencilLine size={18} />
+                                        <span>Personalization</span>
+                                    </button>
+                                    <button onClick={() => openSettings('profile')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                        <User size={18} />
+                                        <span>Profile</span>
+                                    </button>
+                                    <button onClick={() => openSettings('settings')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                        <Settings size={18} />
+                                        <span>Settings</span>
+                                    </button>
+
+                                    <div className="h-[1px] bg-white/5 my-1" />
+
+                                    <button onClick={() => openSettings('help')} className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground group">
+                                        <div className="flex items-center gap-3">
+                                            <Brain size={18} />
+                                            <span>Help</span>
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground group-hover:text-foreground flex items-center gap-1">
+                                            <ChevronDown size={14} className="-rotate-90" />
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
+                                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        <LogOut size={18} />
+                                        <span>Log out</span>
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
+                                className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-accent transition-colors text-sm group ${isProfilePopupOpen ? 'bg-accent' : ''}`}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
                                     {user.name.split(' ').map((n: string) => n[0]).join('')}
                                 </div>
                                 <div className="flex-1 text-left truncate">
-                                    <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
-                                    <div className="text-[10px] text-muted-foreground truncate">Go</div>
+                                    <div className="font-medium text-foreground truncate">{user.name}</div>
                                 </div>
-                            </div>
-                            
-                            <div className="h-[1px] bg-white/5 my-1" />
-
-                            <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                                <Plus size={18} />
-                                <span>Add another account</span>
-                            </button>
-
-                            <div className="h-[1px] bg-border my-1" />
-
-                            <button onClick={() => openSettings('upgrade')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                                <Sparkles size={18} />
-                                <span>Upgrade plan</span>
-                            </button>
-                            <button onClick={() => openSettings('personalization')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                                <PencilLine size={18} />
-                                <span>Personalization</span>
-                            </button>
-                            <button onClick={() => openSettings('profile')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                                <User size={18} />
-                                <span>Profile</span>
-                            </button>
-                            <button onClick={() => openSettings('settings')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
-                                <Settings size={18} />
-                                <span>Settings</span>
-                            </button>
-
-                            <div className="h-[1px] bg-white/5 my-1" />
-
-                            <button onClick={() => openSettings('help')} className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground group">
-                                <div className="flex items-center gap-3">
-                                    <Brain size={18} />
-                                    <span>Help</span>
-                                </div>
-                                <div className="text-[10px] text-muted-foreground group-hover:text-foreground flex items-center gap-1">
-                                    <ChevronDown size={14} className="-rotate-90" />
+                                <div className="w-4 h-4 rounded hover:bg-accent flex items-center justify-center transition-colors">
+                                    <Settings size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                                 </div>
                             </button>
-                            <button 
-                                onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
-                                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
-                            >
-                                <LogOut size={18} />
-                                <span>Log out</span>
-                            </button>
                         </div>
-                    )}
-                    <button 
-                        onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
-                        className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-accent transition-colors text-sm group ${isProfilePopupOpen ? 'bg-accent' : ''}`}
-                    >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
-                            {user.name.split(' ').map((n: string) => n[0]).join('')}
-                        </div>
-                        <div className="flex-1 text-left truncate">
-                            <div className="font-medium text-foreground truncate">{user.name}</div>
-                        </div>
-                        <div className="w-4 h-4 rounded hover:bg-accent flex items-center justify-center transition-colors">
-                            <Settings size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </div>
-                    </button>
-                </div>
-                </>
+                    </>
                 )}
 
                 {!isSidebarOpen && (
@@ -711,10 +711,10 @@ export default function Dashboard() {
                                         <div className="text-[10px] text-muted-foreground truncate">Go</div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="h-[1px] bg-border my-1" />
 
-                                <button 
+                                <button
                                     onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
                                     className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
                                 >
@@ -723,7 +723,7 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         )}
-                        <button 
+                        <button
                             onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
                             className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg hover:ring-2 hover:ring-foreground/20 transition-all"
                         >
@@ -735,11 +735,11 @@ export default function Dashboard() {
 
             {/* ─── Main Content ─── */}
             <main className="flex-1 flex flex-col relative bg-background min-w-0 overflow-hidden">
-                
+
                 {/* Top Toolbar */}
                 <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 z-10 border-b border-border lg:border-none">
                     <div className="flex items-center gap-3">
-                        <button 
+                        <button
                             onClick={() => setIsMobileSidebarOpen(true)}
                             className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
                         >
@@ -750,7 +750,7 @@ export default function Dashboard() {
                             <ChevronDown size={14} className="text-muted-foreground group-hover:text-foreground transition-colors hidden sm:block" />
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
                         {/* Search Bar Toggle & Input */}
                         {hasStarted && (
@@ -758,7 +758,7 @@ export default function Dashboard() {
                                 {isSearchOpen ? (
                                     <div className="flex items-center bg-accent border border-border rounded-lg px-2 lg:px-3 py-1.5 min-w-[150px] sm:min-w-[250px] z-50 animate-fade-in">
                                         <Search size={14} className="text-muted-foreground mr-2" />
-                                        <input 
+                                        <input
                                             autoFocus
                                             type="text"
                                             value={searchQuery}
@@ -769,7 +769,7 @@ export default function Dashboard() {
                                         <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="ml-2 text-muted-foreground hover:text-foreground">
                                             <X size={14} />
                                         </button>
-                                        
+
                                         {/* Dropdown for results */}
                                         {searchQuery.trim().length > 0 && (
                                             <div className="absolute top-full right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 w-[300px]">
@@ -777,8 +777,8 @@ export default function Dashboard() {
                                                     .map((msg, idx) => ({ ...msg, originalIndex: idx }))
                                                     .filter(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
                                                     .map((msg, i) => (
-                                                        <div 
-                                                            key={i} 
+                                                        <div
+                                                            key={i}
                                                             onClick={() => scrollToMessage(msg.originalIndex)}
                                                             className="px-4 py-3 hover:bg-accent cursor-pointer border-b border-border last:border-0"
                                                         >
@@ -798,7 +798,7 @@ export default function Dashboard() {
                                         )}
                                     </div>
                                 ) : (
-                                    <button 
+                                    <button
                                         onClick={() => setIsSearchOpen(true)}
                                         className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                     >
@@ -809,22 +809,22 @@ export default function Dashboard() {
                         )}
 
                         <div className="flex items-center gap-2">
-                             <ModeToggle />
-                             <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors">
+                            <ModeToggle />
+                            <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors">
                                 <Sparkles size={16} />
-                             </div>
-                             <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors overflow-hidden">
+                            </div>
+                            <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors overflow-hidden">
                                 <div className="w-full h-full bg-gradient-to-br from-blue-500/50 to-purple-500/50 flex items-center justify-center text-[10px] font-bold">
                                     {user.name[0]}
                                 </div>
-                             </div>
+                            </div>
                         </div>
                     </div>
                 </header>
 
                 {/* Chat/Center Area */}
                 <div className={`flex-1 flex flex-col min-h-0 overflow-hidden transition-all duration-500 ease-in-out ${hasStarted ? 'pt-4' : 'items-center justify-center -mt-16'}`}>
-                    
+
                     {!hasStarted ? (
                         <>
                             <h2 className="text-4xl font-bold text-foreground mb-10 tracking-tight animate-slide-up">What can I help with?</h2>
@@ -833,7 +833,7 @@ export default function Dashboard() {
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
                                     <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-2xl min-h-[120px] transition-all">
-                                        <textarea 
+                                        <textarea
                                             placeholder="Ask anything..."
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
@@ -841,10 +841,10 @@ export default function Dashboard() {
                                             className="w-full bg-transparent p-5 pb-16 outline-none text-foreground placeholder-muted-foreground resize-none h-auto max-h-[400px]"
                                             rows={1}
                                         />
-                                        
+
                                         <div className="absolute bottom-4 left-5 flex items-center gap-1.5">
                                             <div className="relative">
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         setIsPlusMenuOpen(!isPlusMenuOpen)
@@ -853,9 +853,9 @@ export default function Dashboard() {
                                                 >
                                                     <Plus size={18} />
                                                 </button>
-                                                
+
                                                 {isPlusMenuOpen && (
-                                                    <div 
+                                                    <div
                                                         className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
@@ -888,10 +888,10 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                         <div className="absolute bottom-4 right-5 flex items-center gap-2">
-                                             <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
+                                            <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
                                                 <Mic size={18} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={handleSendMessage}
                                                 className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95"
                                             >
@@ -919,8 +919,8 @@ export default function Dashboard() {
                             {/* Messages List */}
                             <div className="flex-1 overflow-y-auto px-4 space-y-6 scroll-smooth pt-4">
                                 {messages.map((msg, idx) => (
-                                    <div 
-                                        key={idx} 
+                                    <div
+                                        key={idx}
                                         ref={(el) => { messageRefs.current[idx] = el }}
                                         className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up transition-all duration-500`}
                                     >
@@ -934,11 +934,10 @@ export default function Dashboard() {
                                                 </button>
                                             </div>
                                         )}
-                                        <div className={`max-w-[92%] lg:max-w-[80%] p-3 lg:p-4 rounded-2xl transition-all duration-500 relative ${
-                                            msg.role === 'user' 
-                                            ? 'bg-accent border border-border text-foreground' 
-                                            : 'text-foreground/90'
-                                        } ${highlightedMsgIdx === idx ? 'ring-2 ring-purple-500 bg-purple-500/20 scale-[1.02]' : ''}`}>
+                                        <div className={`max-w-[92%] lg:max-w-[80%] p-3 lg:p-4 rounded-2xl transition-all duration-500 relative ${msg.role === 'user'
+                                                ? 'bg-accent border border-border text-foreground'
+                                                : 'text-foreground/90'
+                                            } ${highlightedMsgIdx === idx ? 'ring-2 ring-purple-500 bg-purple-500/20 scale-[1.02]' : ''}`}>
                                             {msg.role === 'assistant' && (
                                                 <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-2">
                                                     <Sparkles size={12} className="text-white" />
@@ -946,7 +945,7 @@ export default function Dashboard() {
                                             )}
                                             {editingMsgIdx === idx ? (
                                                 <div className="flex flex-col gap-2 min-w-[250px]">
-                                                    <textarea 
+                                                    <textarea
                                                         value={editMsgText}
                                                         onChange={(e) => setEditMsgText(e.target.value)}
                                                         className="w-full bg-accent border border-border rounded-xl p-3 text-sm text-foreground resize-none outline-none focus:ring-2 focus:ring-purple-500/50"
@@ -980,7 +979,7 @@ export default function Dashboard() {
                                 <div className="max-w-3xl mx-auto relative group">
                                     <div className="relative flex items-center bg-card border border-border rounded-2xl shadow-xl transition-all pl-3">
                                         <div className="relative">
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     setIsPlusMenuOpen(!isPlusMenuOpen)
@@ -989,9 +988,9 @@ export default function Dashboard() {
                                             >
                                                 <Plus size={18} />
                                             </button>
-                                            
+
                                             {isPlusMenuOpen && (
-                                                <div 
+                                                <div
                                                     className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
@@ -1023,7 +1022,7 @@ export default function Dashboard() {
                                             )}
                                         </div>
 
-                                        <textarea 
+                                        <textarea
                                             placeholder="Ask anything..."
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
@@ -1032,10 +1031,10 @@ export default function Dashboard() {
                                             rows={1}
                                         />
                                         <div className="flex items-center gap-2 pr-4 shrink-0">
-                                             <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                                            <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
                                                 <Mic size={18} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={handleSendMessage}
                                                 className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95"
                                             >
@@ -1065,13 +1064,13 @@ export default function Dashboard() {
                             This will permanently delete this chat and all its messages. This action cannot be undone.
                         </p>
                         <div className="flex gap-3">
-                            <button 
+                            <button
                                 onClick={() => setIsDeleteChatModalOpen(false)}
                                 className="flex-1 px-4 py-2 rounded-xl border border-border text-foreground hover:bg-accent transition-colors text-sm font-medium"
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 onClick={confirmDeleteChat}
                                 className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-medium shadow-lg shadow-red-600/20"
                             >
@@ -1086,20 +1085,20 @@ export default function Dashboard() {
             {isNewChatModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => setIsNewChatModalOpen(false)}
                     />
-                    
+
                     {/* Modal Content */}
                     <div className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl p-8 animate-slide-up">
                         <h3 className="text-2xl font-bold text-foreground mb-2">Name your chat</h3>
                         <p className="text-muted-foreground text-sm mb-6">Give your conversation a title to help you find it later.</p>
-                        
+
                         <div className="space-y-6">
                             <div className="relative group">
                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
-                                <input 
+                                <input
                                     type="text"
                                     value={newChatName}
                                     onChange={(e) => setNewChatName(e.target.value)}
@@ -1109,15 +1108,15 @@ export default function Dashboard() {
                                     onKeyDown={(e) => e.key === 'Enter' && handleCreateChat()}
                                 />
                             </div>
-                            
+
                             <div className="flex gap-3">
-                                <button 
+                                <button
                                     onClick={() => setIsNewChatModalOpen(false)}
                                     className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors border border-white/5"
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     onClick={handleCreateChat}
                                     className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                                 >
@@ -1128,8 +1127,8 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-            
-            <SettingsModal 
+
+            <SettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
                 activeTab={settingsActiveTab}

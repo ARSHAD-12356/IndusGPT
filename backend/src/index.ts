@@ -45,7 +45,7 @@ app.get("/api/health", (req: Request, res: Response) => {
 });
 
 // =====================
-// AI CHAT ENDPOINT (GEMINI)
+// AI CHAT ENDPOINT (FIXED)
 // =====================
 app.post("/api/chat", async (req: Request, res: Response) => {
   const { message } = req.body;
@@ -58,7 +58,8 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return res.status(500).json({ error: "GEMINI_API_KEY not set" });
+      console.log("❌ GEMINI_API_KEY missing");
+      return res.status(500).json({ error: "API key missing" });
     }
 
     const aiRes = await fetch(
@@ -80,20 +81,24 @@ app.post("/api/chat", async (req: Request, res: Response) => {
 
     const data: any = await aiRes.json();
 
+    console.log("🔍 Gemini Response:", JSON.stringify(data, null, 2));
+
     const reply =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from AI";
+      "⚠️ AI did not return a response";
 
+    // ✅ IMPORTANT: frontend-compatible format
     res.json({
-      id: Date.now(),
-      userMessage: message,
-      response: reply,
-      timestamp: new Date(),
+      role: "assistant",
+      content: reply,
     });
 
   } catch (error) {
-    console.error("AI ERROR:", error);
-    res.status(500).json({ error: "AI request failed" });
+    console.error("🔥 AI ERROR:", error);
+    res.status(500).json({
+      role: "assistant",
+      content: "⚠️ Something went wrong. Try again.",
+    });
   }
 });
 
