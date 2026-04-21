@@ -6,10 +6,11 @@ import {
     Plus, Search, Image as ImageIcon, LayoutGrid, Brain, Code,
     ChevronDown, User, Settings, LogOut,
     Mic, Send, Globe, Sparkles, PencilLine,
-    Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, Archive,
+    Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, PinOff, Archive,
     PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
+import { LoginSignupModal } from '../../components/LoginSignupModal'
 import { ModeToggle } from '@/components/mode-toggle'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -24,7 +25,7 @@ export default function Dashboard() {
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false)
     const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
     const [newChatName, setNewChatName] = useState('')
-    const [chats, setChats] = useState<{ _id: string; name: string }[]>([])
+    const [chats, setChats] = useState<{ _id: string; name: string; isPinned?: boolean; isArchived?: boolean }[]>([])
     const [activeChat, setActiveChat] = useState<{ _id: string; name: string } | null>(null)
     const [message, setMessage] = useState('')
     const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([])
@@ -39,9 +40,11 @@ export default function Dashboard() {
 
     // Settings Modal State
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+    const [isLoginSignupModalOpen, setIsLoginSignupModalOpen] = useState(false)
     const [settingsActiveTab, setSettingsActiveTab] = useState('profile')
     const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false)
     const [chatIdToDelete, setChatIdToDelete] = useState<string | null>(null)
+    const [isArchivedOpen, setIsArchivedOpen] = useState(false)
 
     const openSettings = (tab: string) => {
         setSettingsActiveTab(tab)
@@ -154,12 +157,12 @@ export default function Dashboard() {
         } else {
             const parsed = JSON.parse(currentUser)
             setUser(parsed)
-            // Apply theme color
-            if (parsed.themeColor) {
-                document.documentElement.style.setProperty('--primary', parsed.themeColor)
-                document.documentElement.style.setProperty('--accent', parsed.themeColor)
-                document.documentElement.style.setProperty('--ring', parsed.themeColor)
-            }
+            // Hard cleanup of any leftover theme styles
+            const root = document.documentElement;
+            root.style.removeProperty('--primary');
+            root.style.removeProperty('--accent');
+            root.style.removeProperty('--ring');
+
             // Load chats from DB for this user
             fetch(`/api/chats?userId=${parsed.id}`)
                 .then(r => r.json())
@@ -202,6 +205,7 @@ export default function Dashboard() {
         if (!message.trim()) return
 
         const userMsg = message.trim()
+        let responseText = ""
 
         let currentChatId = activeChat?._id
 
@@ -233,11 +237,36 @@ export default function Dashboard() {
         const startTime = Date.now()
 
         const isImageRequest = /(generate|create|make|draw).*image/i.test(userMsg)
+        const lowerMsg = userMsg.toLowerCase().trim()
+
+        // ─── FRONTEND IDENTITY OVERRIDE with Simulated Delay ───
+        if (lowerMsg === 'who are you' || lowerMsg === 'who are you?' || lowerMsg === 'tell me about yourself') {
+            responseText = "I am IndusGPT, a powerful and premium AI assistant made by ArshXCoder. I'm here to help you with everything from coding to creative writing!"
+        } else if (lowerMsg === 'hii' || lowerMsg === 'hello' || lowerMsg === 'hey') {
+            responseText = "Hello! I am IndusGPT, developed by Md Arshad Raza. How can I assist you today?"
+        } else if (lowerMsg.includes('who made you') || lowerMsg.includes('who developed you') || lowerMsg.includes('kisne banaya') || lowerMsg.includes('creator')) {
+            responseText = "I was proudly developed by Md Arshad Raza, also known as ArshXCoder. He is a passionate developer who built me to be your ultimate AI companion."
+        } else if (lowerMsg.includes('what is indusgpt') || lowerMsg.includes('indusgpt kya hai')) {
+            responseText = "IndusGPT is a next-generation AI platform designed for speed, accuracy, and versatility. It combines advanced language models with image generation and deep research capabilities to supercharge your productivity."
+        } else if (lowerMsg.includes('what can you do') || lowerMsg.includes('features')) {
+            responseText = "I can assist you with coding, writing, image generation, data analysis, and deep research. Think of me as your all-in-one creative and technical partner!"
+        } else if (lowerMsg.includes('is this free') || lowerMsg.includes('price') || lowerMsg.includes('cost')) {
+            responseText = "Yes! IndusGPT offers a powerful free plan for everyone. We also have a Pro plan in the works for users who need even more advanced capabilities and higher limits."
+        } else if (lowerMsg.includes('who is umra firdous') || lowerMsg.includes('umra firdous kaun hai')) {
+            const responses = [
+                "Umra Firdous is the Wife of Md Arshad Raza.",
+                "She is the lover of Md Arshad Raza. Together they share a beautiful bond."
+            ];
+            responseText = responses[Math.floor(Math.random() * responses.length)];
+        } else if (lowerMsg.includes('who loves umra') || lowerMsg.includes('umra ko kaun pyar karta hai')) {
+            responseText = "My developer, Md Arshad Raza, loves Umra Firdous very much. She is the most special person in his life.";
+        }
 
         try {
-            let responseText = ""
-
-            if (isImageRequest) {
+            if (responseText) {
+                // Simulate thinking for custom prompts
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else if (isImageRequest) {
                 // Send to Render backend for image generation
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-image`, {
                     method: "POST",
@@ -445,36 +474,26 @@ export default function Dashboard() {
                     </button>
                 </div>
                 {/* Top Nav Items */}
-                <div className={`p-3 w-full ${isSidebarOpen ? 'space-y-1' : 'flex flex-col gap-3 items-center'}`}>
-                    {isSidebarOpen ? (
-                        <div className="flex items-center gap-2 w-full">
-                            <button
-                                onClick={() => setIsNewChatModalOpen(true)}
-                                className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm font-medium group"
-                            >
-                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
-                                    <Plus size={16} className="text-white" />
-                                </div>
-                                <span className="truncate text-foreground">New chat</span>
-                            </button>
-                            <button
-                                onClick={() => setIsSidebarOpen(false)}
-                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white shrink-0 transition-colors"
-                            >
-                                <PanelLeftClose size={18} />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            <PanelLeft size={18} />
-                        </button>
-                    )}
+                {isSidebarOpen ? (
+                    <div className="flex flex-col h-full w-full overflow-hidden">
+                        {/* Header (Fixed) */}
+                        <div className="p-3 shrink-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <button
+                                    onClick={() => setIsNewChatModalOpen(true)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent hover:bg-accent/80 text-foreground transition-all duration-200 group border border-border/50 shadow-sm"
+                                >
+                                    <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                                    <span className="text-sm font-medium">New chat</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <PanelLeft size={18} />
+                                </button>
+                            </div>
 
-                    {isSidebarOpen ? (
-                        <div className="relative w-full">
                             {isChatSearchActive ? (
                                 <div className="flex items-center gap-2 w-full px-3 py-1.5 rounded-xl bg-accent border border-border animate-fade-in">
                                     <Search size={16} className="text-muted-foreground shrink-0" />
@@ -500,31 +519,9 @@ export default function Dashboard() {
                                 </button>
                             )}
                         </div>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => setIsNewChatModalOpen(true)}
-                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-2"
-                            >
-                                <PencilLine size={18} />
-                            </button>
-                            <button
-                                onClick={() => { setIsSidebarOpen(true); setIsChatSearchActive(true); }}
-                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                <Search size={18} />
-                            </button>
-                            <button className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-                                <MessageSquare size={18} />
-                            </button>
-                        </>
-                    )}
-                </div>
 
-                {isSidebarOpen && (
-                    <>
-                        {/* Primary Tabs */}
-                        <div className="px-3 py-4 space-y-0.5 overflow-y-auto flex-1">
+                        {/* Primary Tabs (Fixed) */}
+                        <div className="px-3 py-2 space-y-0.5 shrink-0 border-b border-border/50">
                             {[
                                 { icon: <ImageIcon size={18} />, label: "Images" },
                                 { icon: <Brain size={18} />, label: "Deep research" },
@@ -536,10 +533,51 @@ export default function Dashboard() {
                                 </button>
                             ))}
 
-                            <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">Recents</div>
+                            {/* Archived Section Below Projects */}
+                            <div className="mt-2">
+                                <button 
+                                    onClick={() => setIsArchivedOpen(!isArchivedOpen)}
+                                    className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Archive size={18} />
+                                        <span>Archived</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isArchivedOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isArchivedOpen && (
+                                    <div className="mt-1 space-y-1 pl-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        {chats.filter(c => c.isArchived).map(chat => (
+                                            <button 
+                                                key={chat._id}
+                                                onClick={() => {
+                                                    setChats(prev => prev.map(c => c._id === chat._id ? {...c, isArchived: false} : c));
+                                                    setActiveChat(chat);
+                                                    setIsArchivedOpen(false);
+                                                }}
+                                                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent/50 text-xs text-muted-foreground hover:text-foreground truncate transition-colors"
+                                            >
+                                                <MessageSquare size={14} />
+                                                <span className="truncate">{chat.name}</span>
+                                            </button>
+                                        ))}
+                                        {chats.filter(c => c.isArchived).length === 0 && (
+                                            <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic text-left">No archived chats</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider shrink-0">Recents</div>
+                        
+                        {/* Scrollable Recent Chats Area */}
+                        <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar pb-4">
                             {chats
-                                .filter(chat => chat.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
-                                .map((chat) => (
+                                .filter(chat => !chat.isArchived && chat.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                                .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
+                                .map((chat, idx) => (
                                     <div key={chat._id} className="relative group">
                                         {editingChatId === chat._id ? (
                                             <div className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm bg-accent`}>
@@ -565,67 +603,98 @@ export default function Dashboard() {
                                             >
                                                 <span className="truncate pr-2 text-left flex-1">{chat.name}</span>
 
-                                                <div className={`${activeDropdownId === chat._id ? 'flex' : 'hidden group-hover:flex'} items-center shrink-0 relative`}>
-                                                    <div
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setActiveDropdownId(activeDropdownId === chat._id ? null : chat._id)
-                                                        }}
-                                                        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                                                    >
-                                                        <MoreHorizontal size={14} />
-                                                    </div>
-
-                                                    {activeDropdownId === chat._id && (
+                                                <div className="flex items-center shrink-0 relative gap-1.5">
+                                                    {chat.isPinned && <Pin size={12} className="text-indigo-500 fill-indigo-500" />}
+                                                    <div className={`${activeDropdownId === chat._id ? 'flex' : 'hidden group-hover:flex'} items-center`}>
                                                         <div
-                                                            className="absolute right-0 bottom-full mb-1 w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom"
-                                                            onClick={(e) => e.stopPropagation()}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setActiveDropdownId(activeDropdownId === chat._id ? null : chat._id)
+                                                            }}
+                                                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                                                         >
-                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                                <Share size={14} />
-                                                                <span>Share</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                                <Users size={14} />
-                                                                <span>Start a group chat</span>
-                                                            </div>
-                                                            <div
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
-                                                                onClick={(e) => {
-                                                                    setActiveDropdownId(null)
-                                                                    handleEditChatStart(e, chat)
-                                                                }}
-                                                            >
-                                                                <Edit2 size={14} />
-                                                                <span>Rename</span>
-                                                            </div>
-
-                                                            <div className="h-[1px] bg-border my-1 mx-2" />
-
-                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                                <Pin size={14} />
-                                                                <span>Pin chat</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
-                                                                <Archive size={14} />
-                                                                <span>Archive</span>
-                                                            </div>
-
-                                                            <div className="h-[1px] bg-border my-1 mx-2" />
-
-                                                            <div
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-accent cursor-pointer transition-colors"
-                                                                onClick={(e) => {
-                                                                    setActiveDropdownId(null)
-                                                                    handleDeleteChat(e, chat._id)
-                                                                }}
-                                                            >
-                                                                <Trash2 size={14} />
-                                                                <span>Delete</span>
-                                                            </div>
+                                                            <MoreHorizontal size={14} />
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
+
+                                                {activeDropdownId === chat._id && (
+                                                    <div
+                                                        className={`absolute right-0 ${idx < chats.length / 2 ? 'top-full mt-1 origin-top' : 'bottom-full mb-1 origin-bottom'} w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <div 
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveDropdownId(null);
+                                                                navigator.clipboard.writeText(window.location.origin + '/chat/' + chat._id);
+                                                                alert('Chat link copied to clipboard!');
+                                                            }}
+                                                        >
+                                                            <Share size={14} />
+                                                            <span>Share</span>
+                                                        </div>
+                                                        <div 
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={() => alert('Group chat feature is coming soon!')}
+                                                        >
+                                                            <Users size={14} />
+                                                            <span>Start a group chat</span>
+                                                        </div>
+                                                        <div
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={(e) => {
+                                                                setActiveDropdownId(null)
+                                                                handleEditChatStart(e, chat)
+                                                            }}
+                                                        >
+                                                            <Edit2 size={14} />
+                                                            <span>Rename</span>
+                                                        </div>
+
+                                                        <div className="h-[1px] bg-border my-1 mx-2" />
+
+                                                        <div 
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveDropdownId(null);
+                                                                const isPinned = chat.isPinned;
+                                                                setChats(prev => prev.map(c => c._id === chat._id ? {...c, isPinned: !isPinned} : c));
+                                                                alert(isPinned ? 'Chat unpinned!' : 'Chat pinned to top!');
+                                                            }}
+                                                        >
+                                                            {chat.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                                                            <span>{chat.isPinned ? 'Unpin chat' : 'Pin chat'}</span>
+                                                        </div>
+                                                        <div 
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveDropdownId(null);
+                                                                setChats(prev => prev.map(c => c._id === chat._id ? {...c, isArchived: true} : c));
+                                                                alert('Chat archived successfully!');
+                                                            }}
+                                                        >
+                                                            <Archive size={14} />
+                                                            <span>Archive</span>
+                                                        </div>
+
+                                                        <div className="h-[1px] bg-border my-1 mx-2" />
+
+                                                        <div
+                                                            className="flex items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-accent cursor-pointer transition-colors"
+                                                            onClick={(e) => {
+                                                                setActiveDropdownId(null)
+                                                                handleDeleteChat(e, chat._id)
+                                                            }}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            <span>Delete</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </button>
                                         )}
                                     </div>
@@ -635,24 +704,34 @@ export default function Dashboard() {
                             )}
                         </div>
 
-                        {/* Bottom Profile */}
-                        <div className="p-3 border-t border-border relative w-full">
+                        {/* Bottom Profile (Fixed) */}
+                        <div className="p-3 border-t border-border shrink-0 relative">
                             {isProfilePopupOpen && (
                                 <div className="absolute bottom-full left-3 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
                                     {/* Profile Info */}
                                     <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
-                                            {user.name.split(' ').map((n: string) => n[0]).join('')}
-                                        </div>
+                                        {user?.profilePic ? (
+                                            <img src={user.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
+                                                {user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                                            </div>
+                                        )}
                                         <div className="flex-1 text-left truncate">
-                                            <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
-                                            <div className="text-[10px] text-muted-foreground truncate">Go</div>
+                                            <div className="text-sm font-medium text-foreground truncate">{user?.name}</div>
+                                            <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
                                         </div>
                                     </div>
 
                                     <div className="h-[1px] bg-white/5 my-1" />
 
-                                    <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
+                                    <button 
+                                        onClick={() => {
+                                            setIsLoginSignupModalOpen(true)
+                                            setIsProfilePopupOpen(false)
+                                        }}
+                                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                    >
                                         <Plus size={18} />
                                         <span>Add another account</span>
                                     </button>
@@ -700,9 +779,13 @@ export default function Dashboard() {
                                 onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
                                 className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-accent transition-colors text-sm group ${isProfilePopupOpen ? 'bg-accent' : ''}`}
                             >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
-                                    {user.name.split(' ').map((n: string) => n[0]).join('')}
-                                </div>
+                                {user?.profilePic ? (
+                                    <img src={user.profilePic} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
+                                        {user.name.split(' ').map((n: string) => n[0]).join('')}
+                                    </div>
+                                )}
                                 <div className="flex-1 text-left truncate">
                                     <div className="font-medium text-foreground truncate">{user.name}</div>
                                 </div>
@@ -711,40 +794,83 @@ export default function Dashboard() {
                                 </div>
                             </button>
                         </div>
-                    </>
-                )}
-
-                {!isSidebarOpen && (
-                    <div className="mt-auto p-3 flex justify-center w-full relative">
-                        {isProfilePopupOpen && (
-                            <div className="absolute bottom-full left-14 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
-                                <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
-                                        {user.name.split(' ').map((n: string) => n[0]).join('')}
-                                    </div>
-                                    <div className="flex-1 text-left truncate">
-                                        <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
-                                        <div className="text-[10px] text-muted-foreground truncate">Go</div>
-                                    </div>
-                                </div>
-
-                                <div className="h-[1px] bg-border my-1" />
-
-                                <button
-                                    onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
-                                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
-                                >
-                                    <LogOut size={18} />
-                                    <span>Log out</span>
-                                </button>
-                            </div>
-                        )}
+                    </div>
+                ) : (
+                    <div className="flex flex-col h-full w-full items-center py-4">
                         <button
-                            onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
-                            className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg hover:ring-2 hover:ring-foreground/20 transition-all"
+                            onClick={() => setIsNewChatModalOpen(true)}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-2"
                         >
-                            {user.name.split(' ').map((n: string) => n[0]).join('')}
+                            <PencilLine size={18} />
                         </button>
+                        <button
+                            onClick={() => { setIsSidebarOpen(true); setIsChatSearchActive(true); }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <Search size={18} />
+                        </button>
+                        <button className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                            <MessageSquare size={18} />
+                        </button>
+
+                        <div className="mt-auto p-3 flex justify-center w-full relative">
+                            {isProfilePopupOpen && (
+                                <div className="absolute bottom-full left-14 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                                    <button 
+                                        onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
+                                        className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-accent transition-all group"
+                                    >
+                                        {user?.profilePic ? (
+                                            <img src={user.profilePic} alt="Profile" className="w-9 h-9 rounded-full object-cover border border-border" />
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+                                                {user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                                            </div>
+                                        )}
+                                        <div className="flex-1 text-left truncate">
+                                            <div className="text-sm font-semibold text-foreground truncate">{user?.name}</div>
+                                        </div>
+                                        <Settings size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                                    </button>
+
+                                    <div className="h-[1px] bg-border my-1" />
+
+                                    <button
+                                        onClick={() => openSettings('upgrade')}
+                                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        <Sparkles size={18} />
+                                        <span>Upgrade plan</span>
+                                    </button>
+                                    <button
+                                        onClick={() => openSettings('settings')}
+                                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        <Settings size={18} />
+                                        <span>Settings</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { localStorage.removeItem('currentUser'); router.push('/'); }}
+                                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                        <LogOut size={18} />
+                                        <span>Log out</span>
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
+                                className="w-10 h-10 rounded-full overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                            >
+                                {user?.profilePic ? (
+                                    <img src={user.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
+                                        {user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                                    </div>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 )}
             </aside>
@@ -823,18 +949,7 @@ export default function Dashboard() {
                                 )}
                             </div>
                         )}
-
-                        <div className="flex items-center gap-2">
-                            <ModeToggle />
-                            <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors">
-                                <Sparkles size={16} />
-                            </div>
-                            <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors overflow-hidden">
-                                <div className="w-full h-full bg-gradient-to-br from-blue-500/50 to-purple-500/50 flex items-center justify-center text-[10px] font-bold">
-                                    {user.name[0]}
-                                </div>
-                            </div>
-                        </div>
+                        <ModeToggle />
                     </div>
                 </header>
 
@@ -872,7 +987,7 @@ export default function Dashboard() {
 
                                                 {isPlusMenuOpen && (
                                                     <div
-                                                        className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
+                                                        className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
@@ -897,37 +1012,45 @@ export default function Dashboard() {
                                                                 <MoreHorizontal size={16} />
                                                                 <span>More</span>
                                                             </div>
-                                                            <ChevronRight size={14} className="text-gray-500 group-hover:text-gray-300" />
+                                                            <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" />
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
-                                        </div>
-                                        <div className="absolute bottom-4 right-5 flex items-center gap-2">
-                                            <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
-                                                <Mic size={18} />
+
+                                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all text-xs font-medium">
+                                                <Globe size={14} />
+                                                <span>Search</span>
                                             </button>
-                                            <button
-                                                onClick={handleSendMessage}
-                                                className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95"
-                                            >
-                                                <Send size={18} />
+                                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all text-xs font-medium">
+                                                <Brain size={14} />
+                                                <span>Reason</span>
                                             </button>
                                         </div>
+
+                                        <button
+                                            onClick={handleSendMessage}
+                                            disabled={!message.trim()}
+                                            className={`absolute bottom-4 right-4 p-2.5 rounded-xl transition-all ${message.trim() ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95' : 'bg-accent text-muted-foreground cursor-not-allowed'}`}
+                                        >
+                                            <Send size={20} />
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-                                    {[
-                                        { icon: <ImageIcon size={14} />, label: "Create image" },
-                                        { icon: <PencilLine size={14} />, label: "Write or edit" },
-                                        { icon: <Globe size={14} />, label: "Look something up" },
-                                    ].map((pill) => (
-                                        <button key={pill.label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 border border-border hover:border-foreground/20 hover:bg-accent text-xs text-muted-foreground hover:text-foreground transition-all">
-                                            {pill.icon}
-                                            <span>{pill.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                            </div>
+
+                            {/* Suggestions */}
+                            <div className="flex flex-wrap justify-center gap-2.5 mt-8 max-w-2xl px-4 animate-fade-in delay-200">
+                                {[
+                                    { icon: <ImageIcon size={14} />, label: "Create image" },
+                                    { icon: <PencilLine size={14} />, label: "Write or edit" },
+                                    { icon: <Globe size={14} />, label: "Look something up" },
+                                ].map((pill) => (
+                                    <button key={pill.label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 border border-border hover:border-foreground/20 hover:bg-accent text-xs text-muted-foreground hover:text-foreground transition-all">
+                                        {pill.icon}
+                                        <span>{pill.label}</span>
+                                    </button>
+                                ))}
                             </div>
                         </>
                     ) : (
@@ -950,53 +1073,44 @@ export default function Dashboard() {
                                                 </button>
                                             </div>
                                         )}
-                                        <div className={`max-w-[92%] lg:max-w-[80%] p-3 lg:p-4 rounded-2xl transition-all duration-500 relative ${msg.role === 'user'
-                                                ? 'bg-accent border border-border text-foreground'
-                                                : 'text-foreground/90'
-                                            } ${highlightedMsgIdx === idx ? 'ring-2 ring-purple-500 bg-purple-500/20 scale-[1.02]' : ''}`}>
-                                            {msg.role === 'assistant' && (
-                                                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-2">
-                                                    <Sparkles size={12} className="text-white" />
-                                                </div>
-                                            )}
+
+                                        <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
                                             {editingMsgIdx === idx ? (
-                                                <div className="flex flex-col gap-2 min-w-[250px]">
+                                                <div className="flex flex-col gap-2 min-w-[200px]">
                                                     <textarea
                                                         value={editMsgText}
                                                         onChange={(e) => setEditMsgText(e.target.value)}
-                                                        className="w-full bg-accent border border-border rounded-xl p-3 text-sm text-foreground resize-none outline-none focus:ring-2 focus:ring-purple-500/50"
+                                                        className="bg-background/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-white/30 w-full"
                                                         rows={3}
+                                                        autoFocus
                                                     />
-                                                    <div className="flex justify-end gap-2 mt-1">
-                                                        <button onClick={() => setEditingMsgIdx(null)} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-accent">Cancel</button>
-                                                        <button onClick={() => handleSaveEdit(idx)} className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors">Save</button>
+                                                    <div className="flex justify-end gap-2">
+                                                        <button onClick={() => setEditingMsgIdx(null)} className="text-[10px] text-white/60 hover:text-white px-2 py-1">Cancel</button>
+                                                        <button onClick={() => handleSaveEdit(idx)} className="text-[10px] bg-white/20 hover:bg-white/30 rounded px-3 py-1 font-medium transition-colors">Save</button>
                                                     </div>
                                                 </div>
-                                            ) : msg.content.startsWith('[IMAGE]') ? (
-                                                <img src={msg.content.replace('[IMAGE]', '')} alt="Generated Image" className="max-w-full rounded-lg shadow-lg border border-border" />
                                             ) : (
-                                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                                    <ReactMarkdown 
+                                                <div className="text-sm leading-relaxed prose prose-invert max-w-none prose-p:my-0 prose-pre:bg-black/20">
+                                                    <ReactMarkdown
                                                         remarkPlugins={[remarkGfm]}
                                                         components={{
-                                                            code({ node, inline, className, children, ...props }: any) {
-                                                                const match = /language-(\w+)/.exec(className || '')
+                                                            code: ({ node, inline, className, children, ...props }: any) => {
+                                                                const match = /language-(\w+)/.exec(className || '');
                                                                 return !inline && match ? (
                                                                     <CodeBlock
                                                                         language={match[1]}
                                                                         value={String(children).replace(/\n$/, '')}
+                                                                        {...props}
                                                                     />
                                                                 ) : (
-                                                                    <code className={`${className} bg-accent-foreground/10 px-1.5 py-0.5 rounded-md text-sm font-mono`} {...props}>
+                                                                    <code className={className} {...props}>
                                                                         {children}
                                                                     </code>
-                                                                )
+                                                                );
                                                             },
-                                                            p: ({ children }) => <p className="text-sm leading-relaxed mb-4 last:mb-0">{children}</p>,
-                                                            ul: ({ children }) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
-                                                            ol: ({ children }) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
-                                                            li: ({ children }) => <li className="text-sm">{children}</li>,
-                                                            a: ({ href, children }) => <a href={href} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                                                            p: ({ children }) => <p className="mb-0 last:mb-0">{children}</p>,
+                                                            ul: ({ children }) => <ul className="list-disc pl-4 my-2">{children}</ul>,
+                                                            ol: ({ children }) => <ol className="list-decimal pl-4 my-2">{children}</ol>,
                                                             blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic my-4">{children}</blockquote>,
                                                         }}
                                                     >
@@ -1099,8 +1213,7 @@ export default function Dashboard() {
                     )}
                 </div>
             </main>
-
-            {/* ─── Delete Chat Confirmation Modal ─── */}
+{/* ─── Delete Chat Confirmation Modal ─── */}
             {isDeleteChatModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
                     <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-slide-up">
@@ -1130,51 +1243,53 @@ export default function Dashboard() {
             )}
 
             {/* ─── New Chat Modal ─── */}
-            {isNewChatModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setIsNewChatModalOpen(false)}
-                    />
+            {
+    isNewChatModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setIsNewChatModalOpen(false)}
+            />
 
-                    {/* Modal Content */}
-                    <div className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl p-8 animate-slide-up">
-                        <h3 className="text-2xl font-bold text-foreground mb-2">Name your chat</h3>
-                        <p className="text-muted-foreground text-sm mb-6">Give your conversation a title to help you find it later.</p>
+            {/* Modal Content */}
+            <div className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl p-8 animate-slide-up">
+                <h3 className="text-2xl font-bold text-foreground mb-2">Name your chat</h3>
+                <p className="text-muted-foreground text-sm mb-6">Give your conversation a title to help you find it later.</p>
 
-                        <div className="space-y-6">
-                            <div className="relative group">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
-                                <input
-                                    type="text"
-                                    value={newChatName}
-                                    onChange={(e) => setNewChatName(e.target.value)}
-                                    placeholder="e.g., Project Analysis"
-                                    className="relative w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground outline-none focus:border-blue-500/50 transition-all"
-                                    autoFocus
-                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateChat()}
-                                />
-                            </div>
+                <div className="space-y-6">
+                    <div className="relative group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
+                        <input
+                            type="text"
+                            value={newChatName}
+                            onChange={(e) => setNewChatName(e.target.value)}
+                            placeholder="e.g., Project Analysis"
+                            className="relative w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground outline-none focus:border-blue-500/50 transition-all"
+                            autoFocus
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreateChat()}
+                        />
+                    </div>
 
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setIsNewChatModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors border border-white/5"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleCreateChat}
-                                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                                >
-                                    Continue
-                                </button>
-                            </div>
-                        </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsNewChatModalOpen(false)}
+                            className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors border border-white/5"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleCreateChat}
+                            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                        >
+                            Continue
+                        </button>
                     </div>
                 </div>
-            )}
+            </div>
+        </div>
+    )
+}
 
             <SettingsModal
                 isOpen={isSettingsModalOpen}
@@ -1184,6 +1299,12 @@ export default function Dashboard() {
                 user={user}
                 onClearChats={handleClearChats}
             />
-        </div>
+
+            <LoginSignupModal 
+                isOpen={isLoginSignupModalOpen}
+                onClose={() => setIsLoginSignupModalOpen(false)}
+                themeColor={user?.themeColor}
+            />
+        </div >
     )
 }

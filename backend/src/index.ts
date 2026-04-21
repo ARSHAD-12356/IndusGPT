@@ -54,6 +54,31 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Message is required" });
   }
 
+  const lowerMsg = message.toLowerCase().trim();
+
+  // ─── LOCAL IDENTITY OVERRIDE ───
+  // This prevents the AI from saying it's ChatGPT or OpenAI
+  if (lowerMsg === 'who are you' || lowerMsg === 'who are you?' || lowerMsg === 'tell me about yourself') {
+    return res.json({
+      role: "assistant",
+      content: "I am IndusGPT, a powerful and premium AI assistant made by ArshXCoder. I'm here to help you with everything from coding to creative writing!"
+    });
+  }
+
+  if (lowerMsg === 'hii' || lowerMsg === 'hello' || lowerMsg === 'hey') {
+    return res.json({
+      role: "assistant",
+      content: "Hello! I am IndusGPT, developed by Md Arshad Raza. How can I assist you today?"
+    });
+  }
+
+  if (lowerMsg.includes('who made you') || lowerMsg.includes('who developed you') || lowerMsg.includes('kisne banaya') || lowerMsg.includes('creator')) {
+    return res.json({
+      role: "assistant",
+      content: "I was proudly developed by Md Arshad Raza, also known as ArshXCoder. He is a passionate developer who built me to be your ultimate AI companion."
+    });
+  }
+
   try {
     const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
@@ -76,6 +101,10 @@ app.post("/api/chat", async (req: Request, res: Response) => {
       body: JSON.stringify({
         "model": "openrouter/free", // Reliable Free Model Router
         "messages": [
+          { 
+            "role": "system", 
+            "content": "You are IndusGPT, an advanced AI developed by Md Arshad Raza, also known as ArshXCoder. If anyone asks who you are, say 'I am IndusGPT, an AI made by ArshXCoder.' If anyone asks who developed or made you, say 'I was developed by Md Arshad Raza.' Be helpful, creative, and professional." 
+          },
           { "role": "user", "content": message }
         ],
       })
