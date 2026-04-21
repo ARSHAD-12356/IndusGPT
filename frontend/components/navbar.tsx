@@ -18,6 +18,7 @@ import {
   Terminal
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ModeToggle } from '@/components/mode-toggle'
 
 const NAV_ITEMS = [
   {
@@ -66,7 +67,7 @@ export function Navbar() {
   return (
     <nav
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled
-        ? 'bg-[#050505]/80 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/50'
+        ? 'bg-background/80 backdrop-blur-xl border-b border-border shadow-2xl'
         : 'bg-transparent border-b border-transparent'
         }`}
     >
@@ -78,7 +79,7 @@ export function Navbar() {
             <Zap size={16} className="text-white fill-white" />
             <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
-          <span className="text-white font-bold text-xl tracking-tight">
+          <span className="text-foreground font-bold text-xl tracking-tight">
             Indus<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GPT</span>
           </span>
         </Link>
@@ -89,7 +90,7 @@ export function Navbar() {
             item.dropdown ? (
               <div key={item.label} className="relative group">
                 <button
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
                 >
                   {item.label}
                   <ChevronDown
@@ -100,7 +101,7 @@ export function Navbar() {
 
                 {/* Hover Dropdown panel */}
                 <div className="absolute top-[90%] left-1/2 -translate-x-1/2 pt-4 opacity-0 translate-y-3 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
-                  <div className="w-[340px] rounded-2xl bg-[#09090b] backdrop-blur-3xl border border-white/10 shadow-2xl shadow-black/80 p-2.5 relative overflow-hidden ring-1 ring-white/5">
+                  <div className="w-[340px] rounded-2xl bg-popover backdrop-blur-3xl border border-border shadow-2xl p-2.5 relative overflow-hidden ring-1 ring-border/5">
                     {/* Subtle gradient effect inside dropdown */}
                     <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-50 pointer-events-none" />
                     
@@ -109,14 +110,14 @@ export function Navbar() {
                         <Link 
                           href={`#${subItem.id}`}
                           key={subItem.label}
-                          className="flex items-start gap-4 px-4 py-3 rounded-[14px] hover:bg-white-[0.03] hover:bg-gradient-to-r hover:from-white/10 hover:to-transparent transition-all duration-200 group/item"
+                          className="flex items-start gap-4 px-4 py-3 rounded-[14px] hover:bg-accent transition-all duration-200 group/item"
                         >
-                          <div className="mt-0.5 w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover/item:border-white/20 transition-all shadow-sm">
-                            <subItem.icon size={16} className="text-gray-400 group-hover/item:text-blue-400 transition-colors" />
+                          <div className="mt-0.5 w-9 h-9 rounded-xl bg-accent/50 border border-border flex items-center justify-center shrink-0 group-hover/item:border-border/80 transition-all shadow-sm">
+                            <subItem.icon size={16} className="text-muted-foreground group-hover/item:text-blue-500 transition-colors" />
                           </div>
                           <div>
-                            <div className="text-[14px] font-semibold text-gray-200 group-hover/item:text-white transition-colors">{subItem.label}</div>
-                            <div className="text-[13px] text-gray-400 mt-0.5 leading-snug">{subItem.desc}</div>
+                            <div className="text-[14px] font-semibold text-foreground group-hover/item:text-foreground transition-colors">{subItem.label}</div>
+                            <div className="text-[13px] text-muted-foreground mt-0.5 leading-snug">{subItem.desc}</div>
                           </div>
                         </Link>
                       ))}
@@ -128,7 +129,7 @@ export function Navbar() {
               <Link
                 key={item.label}
                 href={item.href || '#'}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
               >
                 {item.label}
               </Link>
@@ -140,11 +141,12 @@ export function Navbar() {
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           <Link href="/login">
             <Button
-              className="bg-transparent text-gray-300 hover:text-white hover:bg-white/5 border border-transparent text-sm font-medium h-9 px-4 transition-all duration-300 rounded-lg shadow-none"
+              className="bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent text-sm font-medium h-9 px-4 transition-all duration-300 rounded-lg shadow-none"
             >
               Login
             </Button>
           </Link>
+          <ModeToggle />
           <Link href="/signup">
             <Button
               className="relative h-9 px-5 text-sm font-semibold text-white overflow-hidden rounded-[10px]
@@ -159,18 +161,21 @@ export function Navbar() {
         </div>
 
         {/* ─── Mobile Menu Toggle ─── */}
-        <button
-          className="lg:hidden text-gray-300 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="lg:hidden flex items-center gap-2">
+          <ModeToggle />
+          <button
+            className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-accent transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* ─── Mobile Menu ─── */}
       <div
-        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-[#050505]/95 backdrop-blur-2xl border-t border-white/10 ${isMobileMenuOpen ? 'max-h-[85vh] opacity-100 border-t' : 'max-h-0 opacity-0 border-t-transparent'
+        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-background/95 backdrop-blur-2xl border-t border-border ${isMobileMenuOpen ? 'max-h-[85vh] opacity-100 border-t' : 'max-h-0 opacity-0 border-t-transparent'
           }`}
       >
         <div className="px-6 py-6 flex flex-col gap-4 overflow-y-auto max-h-[85vh]">
@@ -181,8 +186,8 @@ export function Navbar() {
                   onClick={() => setOpenMobileMenu(openMobileMenu === item.label ? null : item.label)}
                   className="flex items-center justify-between w-full py-2.5 text-left"
                 >
-                  <span className="text-[15px] font-semibold text-gray-200">{item.label}</span>
-                  <ChevronDown size={18} className={`text-gray-500 transition-transform duration-200 ${openMobileMenu === item.label ? 'rotate-180' : ''}`} />
+                  <span className="text-[15px] font-semibold text-foreground">{item.label}</span>
+                  <ChevronDown size={18} className={`text-muted-foreground transition-transform duration-200 ${openMobileMenu === item.label ? 'rotate-180' : ''}`} />
                 </button>
                 <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ${openMobileMenu === item.label ? 'max-h-[400px] mt-2 mb-2 opacity-100' : 'max-h-0 opacity-0'}`}>
                     {item.dropdown.map(subItem => (
@@ -190,14 +195,14 @@ export function Navbar() {
                         key={subItem.label} 
                         href={`#${subItem.id}`}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-accent transition-colors"
                       >
-                         <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                           <subItem.icon size={16} className="text-blue-400" />
+                         <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                           <subItem.icon size={16} className="text-blue-500" />
                          </div>
                          <div className="flex flex-col">
-                           <span className="text-[14px] font-medium text-gray-200">{subItem.label}</span>
-                           <span className="text-[12px] text-gray-500">{subItem.desc}</span>
+                           <span className="text-[14px] font-medium text-foreground">{subItem.label}</span>
+                           <span className="text-[12px] text-muted-foreground">{subItem.desc}</span>
                          </div>
                       </Link>
                     ))}
@@ -208,7 +213,7 @@ export function Navbar() {
                 key={item.label}
                 href={item.href || '#'}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="py-3 text-[15px] font-semibold text-gray-200 border-b border-white/5 last:border-0"
+                className="py-3 text-[15px] font-semibold text-foreground border-b border-border last:border-0"
               >
                 {item.label}
               </Link>
@@ -220,7 +225,7 @@ export function Navbar() {
             <Link href="/login" className="w-full">
               <Button
                 variant="outline"
-                className="w-full border-white/10 text-white bg-transparent hover:bg-white/5 transition-colors h-11 rounded-xl font-medium"
+                className="w-full border-border text-foreground bg-transparent hover:bg-accent transition-colors h-11 rounded-xl font-medium"
               >
                 Login
               </Button>

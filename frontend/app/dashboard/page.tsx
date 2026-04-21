@@ -10,6 +10,7 @@ import {
   PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
+import { ModeToggle } from '@/components/mode-toggle'
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
 
 export default function Dashboard() {
@@ -30,10 +31,14 @@ export default function Dashboard() {
     const [editingChatId, setEditingChatId] = useState<string | null>(null)
     const [editingChatName, setEditingChatName] = useState('')
     const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null)
+    const [chatSearchQuery, setChatSearchQuery] = useState('')
+    const [isChatSearchActive, setIsChatSearchActive] = useState(false)
     
     // Settings Modal State
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
     const [settingsActiveTab, setSettingsActiveTab] = useState('profile')
+    const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false)
+    const [chatIdToDelete, setChatIdToDelete] = useState<string | null>(null)
 
     const openSettings = (tab: string) => {
         setSettingsActiveTab(tab)
@@ -71,7 +76,8 @@ export default function Dashboard() {
     const [editingMsgIdx, setEditingMsgIdx] = useState<number | null>(null)
     const [editMsgText, setEditMsgText] = useState('')
 
-    const handleDeleteMessage = (idx: number) => {
+    const handleDeleteMessage = async (idx: number) => {
+        let updatedMsgs: any[] = [];
         setMessages(prev => {
             const newMsgs = [...prev];
             // If the next message is an assistant response, delete both
@@ -80,15 +86,40 @@ export default function Dashboard() {
             } else {
                 newMsgs.splice(idx, 1);
             }
+            updatedMsgs = newMsgs;
             return newMsgs;
         });
+
+        if (activeChat?._id && updatedMsgs.length >= 0) {
+            try {
+                await fetch(`/api/chats/${activeChat._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: updatedMsgs })
+                });
+            } catch (err) {
+                console.error('Failed to sync message deletion:', err);
+            }
+        }
     }
 
-    const handleSaveEdit = (idx: number) => {
+    const handleSaveEdit = async (idx: number) => {
         const updated = [...messages];
         updated[idx].content = editMsgText;
         setMessages(updated);
         setEditingMsgIdx(null);
+
+        if (activeChat?._id) {
+            try {
+                await fetch(`/api/chats/${activeChat._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: updated })
+                });
+            } catch (err) {
+                console.error('Failed to sync message edit:', err);
+            }
+        }
     }
 
     useEffect(() => {
@@ -108,7 +139,9 @@ export default function Dashboard() {
     }, [activeDropdownId])
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        if (messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: isTyping ? "smooth" : "auto" })
+        }
     }, [messages, isTyping])
 
     useEffect(() => {
@@ -196,7 +229,7 @@ export default function Dashboard() {
 
             if (isImageRequest) {
                 // Send to our local image generation backend
-                const response = await fetch("http://localhost:5000/generate-image", {
+                const response = await fetch("/api/generate-image", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: userMsg })
@@ -280,33 +313,61 @@ export default function Dashboard() {
     }
 
     const handleChatSelect = async (chat: any) => {
-        setActiveChat(chat)
-        setIsMobileSidebarOpen(false)
+        // Instant response: mark this as the active chat
+        setActiveChat(chat);
+        setIsMobileSidebarOpen(false);
+        setSearchQuery('');
+        setIsSearchOpen(false);
+        
+        // Use cached messages if available for instant display
+        if (chat.messages && chat.messages.length > 0) {
+            setMessages(chat.messages);
+            setHasStarted(true);
+        } else {
+            // If no cached messages, we'll fetch them.
+            // We don't setHasStarted(true) yet because it might be an empty chat.
+            // But we SHOULD clear the current messages so we don't show the previous chat's messages.
+            setMessages([]);
+            setHasStarted(false);
+        }
+
         try {
-            const res = await fetch(`/api/chats/${chat._id}`)
-            const data = await res.json()
-            if (data.chat && data.chat.messages) {
-                setMessages(data.chat.messages)
-                setHasStarted(data.chat.messages.length > 0)
-            } else {
-                setMessages([])
-                setHasStarted(false)
+            const res = await fetch(`/api/chats/${chat._id}`);
+            const data = await res.json();
+            
+            if (data.chat) {
+                const fetchedMessages = data.chat.messages || [];
+                setMessages(fetchedMessages);
+                setHasStarted(fetchedMessages.length > 0);
+                
+                // Update the main chats state to cache these messages
+                setChats(prev => prev.map(c => 
+                    c._id === chat._id ? { ...c, messages: fetchedMessages } : c
+                ));
             }
         } catch (err) {
-            console.error('Failed to load chat messages:', err)
+            console.error('Failed to load chat messages:', err);
         }
     }
 
-    const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
+    const handleDeleteChat = (e: React.MouseEvent, chatId: string) => {
         e.stopPropagation()
+        setChatIdToDelete(chatId)
+        setIsDeleteChatModalOpen(true)
+    }
+
+    const confirmDeleteChat = async () => {
+        if (!chatIdToDelete) return
         try {
-            await fetch(`/api/chats/${chatId}`, { method: 'DELETE' })
-            setChats(prev => prev.filter(c => c._id !== chatId))
-            if (activeChat?._id === chatId) {
+            await fetch(`/api/chats/${chatIdToDelete}`, { method: 'DELETE' })
+            setChats(prev => prev.filter(c => c._id !== chatIdToDelete))
+            if (activeChat?._id === chatIdToDelete) {
                 setActiveChat(null)
                 setMessages([])
                 setHasStarted(false)
             }
+            setIsDeleteChatModalOpen(false)
+            setChatIdToDelete(null)
         } catch (err) {
             console.error('Failed to delete chat:', err)
         }
@@ -345,7 +406,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="flex h-screen bg-[#0d0d0f] text-gray-200 overflow-hidden font-sans">
+        <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
             
             {/* ─── Sidebar Overlay (Mobile) ─── */}
             {isMobileSidebarOpen && (
@@ -357,7 +418,7 @@ export default function Dashboard() {
             
             {/* ─── Sidebar ─── */}
             <aside className={`
-                flex flex-col bg-[#050505] border-r border-white/5 transition-all duration-300 shrink-0
+                flex flex-col bg-sidebar border-r border-border transition-all duration-300 shrink-0
                 fixed lg:relative z-[70] h-full
                 ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 ${isSidebarOpen ? 'w-[260px]' : 'w-[68px] items-center'}
@@ -366,7 +427,7 @@ export default function Dashboard() {
                 <div className="lg:hidden absolute top-4 right-4 z-[80]">
                     <button 
                         onClick={() => setIsMobileSidebarOpen(false)}
-                        className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 rounded-lg bg-accent text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -377,12 +438,12 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2 w-full">
                             <button 
                                 onClick={() => setIsNewChatModalOpen(true)}
-                                className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium group"
+                                className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm font-medium group"
                             >
                               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
                                 <Plus size={16} className="text-white" />
                               </div>
-                              <span className="truncate">New chat</span>
+                              <span className="truncate text-foreground">New chat</span>
                             </button>
                             <button 
                                 onClick={() => setIsSidebarOpen(false)}
@@ -394,29 +455,54 @@ export default function Dashboard() {
                     ) : (
                         <button 
                             onClick={() => setIsSidebarOpen(true)}
-                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <PanelLeft size={18} />
                         </button>
                     )}
                     
                     {isSidebarOpen ? (
-                        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-sm text-gray-400">
-                          <Search size={18} className="shrink-0" />
-                          <span>Search chats</span>
-                        </button>
+                        <div className="relative w-full">
+                            {isChatSearchActive ? (
+                                <div className="flex items-center gap-2 w-full px-3 py-1.5 rounded-xl bg-accent border border-border animate-fade-in">
+                                    <Search size={16} className="text-muted-foreground shrink-0" />
+                                    <input 
+                                        autoFocus
+                                        type="text"
+                                        value={chatSearchQuery}
+                                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                                        placeholder="Search chats..."
+                                        className="bg-transparent border-none outline-none text-sm text-foreground w-full placeholder-muted-foreground"
+                                    />
+                                    <button onClick={() => { setIsChatSearchActive(false); setChatSearchQuery(''); }} className="text-muted-foreground hover:text-foreground">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => setIsChatSearchActive(true)}
+                                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
+                                >
+                                    <Search size={18} className="shrink-0" />
+                                    <span>Search chats</span>
+                                </button>
+                            )}
+                        </div>
                     ) : (
                         <>
                             <button 
                                 onClick={() => setIsNewChatModalOpen(true)}
-                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors mt-2"
+                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-2"
                             >
                                 <PencilLine size={18} />
                             </button>
-                            <button className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                            <button 
+                                onClick={() => { setIsSidebarOpen(true); setIsChatSearchActive(true); }}
+                                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                            >
                                 <Search size={18} />
                             </button>
-                            <button className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                            <button className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
                                 <MessageSquare size={18} />
                             </button>
                         </>
@@ -429,29 +515,28 @@ export default function Dashboard() {
                 <div className="px-3 py-4 space-y-0.5 overflow-y-auto flex-1">
                     {[
                         { icon: <ImageIcon size={18} />, label: "Images" },
-                        { icon: <LayoutGrid size={18} />, label: "Apps" },
                         { icon: <Brain size={18} />, label: "Deep research" },
-                        { icon: <Code size={18} />, label: "Codex" },
-                        { icon: <Sparkles size={18} />, label: "GPTs" },
                         { icon: <LayoutGrid size={18} />, label: "Projects" },
                     ].map((item) => (
-                        <button key={item.label} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                        <button key={item.label} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                             {item.icon}
                             <span>{item.label}</span>
                         </button>
                     ))}
 
-                    <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Recents</div>
-                    {chats.map((chat) => (
+                    <div className="pt-6 pb-2 px-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">Recents</div>
+                    {chats
+                        .filter(chat => chat.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                        .map((chat) => (
                         <div key={chat._id} className="relative group">
                             {editingChatId === chat._id ? (
-                                <div className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm bg-white/10`}>
+                                <div className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm bg-accent`}>
                                     <input 
                                         type="text"
                                         value={editingChatName}
                                         onChange={(e) => setEditingChatName(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleEditChatSave(e, chat._id)}
-                                        className="flex-1 bg-transparent text-white outline-none min-w-0"
+                                        className="flex-1 bg-transparent text-foreground outline-none min-w-0"
                                         autoFocus
                                     />
                                     <button onClick={(e) => handleEditChatSave(e, chat._id)} className="text-green-400 hover:text-green-300">
@@ -464,7 +549,7 @@ export default function Dashboard() {
                             ) : (
                                 <button 
                                     onClick={() => handleChatSelect(chat)}
-                                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg transition-colors text-sm ${activeChat?._id === chat._id ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg transition-colors text-sm ${activeChat?._id === chat._id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
                                 >
                                     <span className="truncate pr-2 text-left flex-1">{chat.name}</span>
                                     
@@ -474,26 +559,26 @@ export default function Dashboard() {
                                                 e.stopPropagation()
                                                 setActiveDropdownId(activeDropdownId === chat._id ? null : chat._id)
                                             }}
-                                            className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                                         >
                                             <MoreHorizontal size={14} />
                                         </div>
 
                                         {activeDropdownId === chat._id && (
                                             <div 
-                                                className="absolute right-0 bottom-full mb-1 w-48 bg-[#2f2f2f] border border-white/10 rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom"
+                                                className="absolute right-0 bottom-full mb-1 w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#424242] cursor-pointer transition-colors">
+                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
                                                     <Share size={14} />
                                                     <span>Share</span>
                                                 </div>
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#424242] cursor-pointer transition-colors">
+                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
                                                     <Users size={14} />
                                                     <span>Start a group chat</span>
                                                 </div>
                                                 <div 
-                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#424242] cursor-pointer transition-colors"
+                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
                                                     onClick={(e) => {
                                                         setActiveDropdownId(null)
                                                         handleEditChatStart(e, chat)
@@ -503,21 +588,21 @@ export default function Dashboard() {
                                                     <span>Rename</span>
                                                 </div>
                                                 
-                                                <div className="h-[1px] bg-white/10 my-1 mx-2" />
+                                                <div className="h-[1px] bg-border my-1 mx-2" />
                                                 
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#424242] cursor-pointer transition-colors">
+                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
                                                     <Pin size={14} />
                                                     <span>Pin chat</span>
                                                 </div>
-                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#424242] cursor-pointer transition-colors">
+                                                <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:bg-accent cursor-pointer transition-colors">
                                                     <Archive size={14} />
                                                     <span>Archive</span>
                                                 </div>
                                                 
-                                                <div className="h-[1px] bg-white/10 my-1 mx-2" />
+                                                <div className="h-[1px] bg-border my-1 mx-2" />
                                                 
                                                 <div 
-                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-[#424242] cursor-pointer transition-colors"
+                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-accent cursor-pointer transition-colors"
                                                     onClick={(e) => {
                                                         setActiveDropdownId(null)
                                                         handleDeleteChat(e, chat._id)
@@ -534,65 +619,65 @@ export default function Dashboard() {
                         </div>
                     ))}
                     {chats.length === 0 && (
-                        <div className="px-3 py-2 text-[10px] text-gray-600 italic">No recent chats</div>
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground/40 italic">No recent chats</div>
                     )}
                 </div>
 
                 {/* Bottom Profile */}
-                <div className="p-3 border-t border-white/5 relative w-full">
+                <div className="p-3 border-t border-border relative w-full">
                     {isProfilePopupOpen && (
-                        <div className="absolute bottom-full left-3 w-64 mb-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                        <div className="absolute bottom-full left-3 w-64 mb-2 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
                             {/* Profile Info */}
-                            <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-white/5 cursor-pointer">
+                            <div className="flex items-center gap-3 px-3 py-3 mb-1 rounded-xl hover:bg-accent cursor-pointer">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white">
                                     {user.name.split(' ').map((n: string) => n[0]).join('')}
                                 </div>
                                 <div className="flex-1 text-left truncate">
-                                    <div className="text-sm font-medium text-white truncate">{user.name}</div>
-                                    <div className="text-[10px] text-gray-500 truncate">Go</div>
+                                    <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
+                                    <div className="text-[10px] text-muted-foreground truncate">Go</div>
                                 </div>
                             </div>
                             
                             <div className="h-[1px] bg-white/5 my-1" />
 
-                            <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                            <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                                 <Plus size={18} />
                                 <span>Add another account</span>
                             </button>
 
-                            <div className="h-[1px] bg-white/5 my-1" />
+                            <div className="h-[1px] bg-border my-1" />
 
-                            <button onClick={() => openSettings('upgrade')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                            <button onClick={() => openSettings('upgrade')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                                 <Sparkles size={18} />
                                 <span>Upgrade plan</span>
                             </button>
-                            <button onClick={() => openSettings('personalization')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                            <button onClick={() => openSettings('personalization')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                                 <PencilLine size={18} />
                                 <span>Personalization</span>
                             </button>
-                            <button onClick={() => openSettings('profile')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                            <button onClick={() => openSettings('profile')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                                 <User size={18} />
                                 <span>Profile</span>
                             </button>
-                            <button onClick={() => openSettings('settings')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white">
+                            <button onClick={() => openSettings('settings')} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground">
                                 <Settings size={18} />
                                 <span>Settings</span>
                             </button>
 
                             <div className="h-[1px] bg-white/5 my-1" />
 
-                            <button onClick={() => openSettings('help')} className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white group">
+                            <button onClick={() => openSettings('help')} className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground group">
                                 <div className="flex items-center gap-3">
                                     <Brain size={18} />
                                     <span>Help</span>
                                 </div>
-                                <div className="text-[10px] text-gray-600 group-hover:text-gray-400 flex items-center gap-1">
+                                <div className="text-[10px] text-muted-foreground group-hover:text-foreground flex items-center gap-1">
                                     <ChevronDown size={14} className="-rotate-90" />
                                 </div>
                             </button>
                             <button 
                                 onClick={() => { localStorage.removeItem('currentUser'); router.push('/login'); }}
-                                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-gray-400 hover:text-white"
+                                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground hover:text-foreground"
                             >
                                 <LogOut size={18} />
                                 <span>Log out</span>
@@ -601,16 +686,16 @@ export default function Dashboard() {
                     )}
                     <button 
                         onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
-                        className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm group ${isProfilePopupOpen ? 'bg-white/5' : ''}`}
+                        className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-accent transition-colors text-sm group ${isProfilePopupOpen ? 'bg-accent' : ''}`}
                     >
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
                             {user.name.split(' ').map((n: string) => n[0]).join('')}
                         </div>
                         <div className="flex-1 text-left truncate">
-                            <div className="font-medium text-white truncate">{user.name}</div>
+                            <div className="font-medium text-foreground truncate">{user.name}</div>
                         </div>
-                        <div className="w-4 h-4 rounded hover:bg-white/10 flex items-center justify-center transition-colors">
-                            <Settings size={12} className="text-gray-500 group-hover:text-white transition-colors" />
+                        <div className="w-4 h-4 rounded hover:bg-accent flex items-center justify-center transition-colors">
+                            <Settings size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                         </div>
                     </button>
                 </div>
@@ -631,7 +716,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 
-                                <div className="h-[1px] bg-white/5 my-1" />
+                                <div className="h-[1px] bg-border my-1" />
 
                                 <button 
                                     onClick={() => { localStorage.removeItem('currentUser'); router.push('/login'); }}
@@ -644,7 +729,7 @@ export default function Dashboard() {
                         )}
                         <button 
                             onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
-                            className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg hover:ring-2 hover:ring-white/20 transition-all"
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg hover:ring-2 hover:ring-foreground/20 transition-all"
                         >
                             {user.name.split(' ').map((n: string) => n[0]).join('')}
                         </button>
@@ -653,10 +738,10 @@ export default function Dashboard() {
             </aside>
 
             {/* ─── Main Content ─── */}
-            <main className="flex-1 flex flex-col relative bg-[#0d0d0f] min-w-0 overflow-hidden">
+            <main className="flex-1 flex flex-col relative bg-background min-w-0 overflow-hidden">
                 
                 {/* Top Toolbar */}
-                <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 z-10 border-b border-white/5 lg:border-none">
+                <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 z-10 border-b border-border lg:border-none">
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={() => setIsMobileSidebarOpen(true)}
@@ -664,9 +749,9 @@ export default function Dashboard() {
                         >
                             <Menu size={20} />
                         </button>
-                        <div className="flex items-center gap-2 group cursor-pointer hover:bg-white/5 px-2.5 py-1.5 rounded-lg transition-colors">
-                            <span className="text-lg font-bold text-white tracking-tight">IndusGPT</span>
-                            <ChevronDown size={14} className="text-gray-500 group-hover:text-white transition-colors hidden sm:block" />
+                        <div className="flex items-center gap-2 group cursor-pointer hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors">
+                            <span className="text-lg font-bold text-foreground tracking-tight">IndusGPT</span>
+                            <ChevronDown size={14} className="text-muted-foreground group-hover:text-foreground transition-colors hidden sm:block" />
                         </div>
                     </div>
                     
@@ -675,23 +760,23 @@ export default function Dashboard() {
                         {hasStarted && (
                             <div className="relative">
                                 {isSearchOpen ? (
-                                    <div className="flex items-center bg-white/5 border border-white/10 rounded-lg px-2 lg:px-3 py-1.5 min-w-[150px] sm:min-w-[250px] z-50 animate-fade-in">
-                                        <Search size={14} className="text-gray-400 mr-2" />
+                                    <div className="flex items-center bg-accent border border-border rounded-lg px-2 lg:px-3 py-1.5 min-w-[150px] sm:min-w-[250px] z-50 animate-fade-in">
+                                        <Search size={14} className="text-muted-foreground mr-2" />
                                         <input 
                                             autoFocus
                                             type="text"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             placeholder="Search..."
-                                            className="bg-transparent border-none outline-none text-sm text-white w-full placeholder-gray-500"
+                                            className="bg-transparent border-none outline-none text-sm text-foreground w-full placeholder-muted-foreground"
                                         />
-                                        <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="ml-2 text-gray-500 hover:text-white">
+                                        <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="ml-2 text-muted-foreground hover:text-foreground">
                                             <X size={14} />
                                         </button>
                                         
                                         {/* Dropdown for results */}
                                         {searchQuery.trim().length > 0 && (
-                                            <div className="absolute top-full right-0 mt-2 bg-[#2f2f2f] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 w-[300px]">
+                                            <div className="absolute top-full right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 w-[300px]">
                                                 {messages
                                                     .map((msg, idx) => ({ ...msg, originalIndex: idx }))
                                                     .filter(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -699,19 +784,19 @@ export default function Dashboard() {
                                                         <div 
                                                             key={i} 
                                                             onClick={() => scrollToMessage(msg.originalIndex)}
-                                                            className="px-4 py-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
+                                                            className="px-4 py-3 hover:bg-accent cursor-pointer border-b border-border last:border-0"
                                                         >
-                                                            <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                                                            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                                                                 {msg.role === 'user' ? <User size={10} /> : <Sparkles size={10} />}
                                                                 {msg.role === 'user' ? 'You' : 'IndusGPT'}
                                                             </div>
-                                                            <div className="text-sm text-white truncate">
+                                                            <div className="text-sm text-foreground truncate">
                                                                 {msg.content.replace('[IMAGE]', '🖼️ Image Generation')}
                                                             </div>
                                                         </div>
                                                     ))}
                                                 {messages.filter(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                                                    <div className="px-4 py-3 text-sm text-gray-500 text-center">No matches found</div>
+                                                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">No matches found</div>
                                                 )}
                                             </div>
                                         )}
@@ -719,7 +804,7 @@ export default function Dashboard() {
                                 ) : (
                                     <button 
                                         onClick={() => setIsSearchOpen(true)}
-                                        className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                                        className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                     >
                                         <Search size={16} />
                                     </button>
@@ -728,10 +813,11 @@ export default function Dashboard() {
                         )}
 
                         <div className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition-colors">
+                             <ModeToggle />
+                             <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors">
                                 <Sparkles size={16} />
                              </div>
-                             <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition-colors overflow-hidden">
+                             <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors overflow-hidden">
                                 <div className="w-full h-full bg-gradient-to-br from-blue-500/50 to-purple-500/50 flex items-center justify-center text-[10px] font-bold">
                                     {user.name[0]}
                                 </div>
@@ -745,18 +831,18 @@ export default function Dashboard() {
                     
                     {!hasStarted ? (
                         <>
-                            <h2 className="text-4xl font-bold text-white mb-10 tracking-tight animate-slide-up">What can I help with?</h2>
+                            <h2 className="text-4xl font-bold text-foreground mb-10 tracking-tight animate-slide-up">What can I help with?</h2>
                             <div className="w-full max-w-2xl px-4 relative">
                                 {/* Input Container */}
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
-                                    <div className="relative flex flex-col bg-[#161618] border border-white/10 rounded-2xl shadow-2xl min-h-[120px] transition-all">
+                                    <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-2xl min-h-[120px] transition-all">
                                         <textarea 
                                             placeholder="Ask anything..."
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             onKeyDown={handleKeyDown}
-                                            className="w-full bg-transparent p-5 pb-16 outline-none text-white placeholder-gray-500 resize-none h-auto max-h-[400px]"
+                                            className="w-full bg-transparent p-5 pb-16 outline-none text-foreground placeholder-muted-foreground resize-none h-auto max-h-[400px]"
                                             rows={1}
                                         />
                                         
@@ -767,34 +853,34 @@ export default function Dashboard() {
                                                         e.stopPropagation()
                                                         setIsPlusMenuOpen(!isPlusMenuOpen)
                                                     }}
-                                                    className={`p-2 rounded-lg hover:bg-white/5 transition-colors ${isPlusMenuOpen ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+                                                    className={`p-2 rounded-lg hover:bg-accent transition-colors ${isPlusMenuOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                                                 >
                                                     <Plus size={18} />
                                                 </button>
                                                 
                                                 {isPlusMenuOpen && (
                                                     <div 
-                                                        className="absolute bottom-full left-0 mb-2 w-64 bg-[#2f2f2f] border border-white/10 rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
+                                                        className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                             <Paperclip size={16} />
                                                             <span>Add photos & files</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                             <ImageIcon size={16} />
                                                             <span>Create image</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                             <Lightbulb size={16} />
                                                             <span>Thinking</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                             <Telescope size={16} />
                                                             <span>Deep research</span>
                                                         </button>
-                                                        <div className="h-[1px] bg-white/10 my-1 mx-3" />
-                                                        <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors group">
+                                                        <div className="h-[1px] bg-border my-1 mx-3" />
+                                                        <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors group">
                                                             <div className="flex items-center gap-3">
                                                                 <MoreHorizontal size={16} />
                                                                 <span>More</span>
@@ -824,7 +910,7 @@ export default function Dashboard() {
                                         { icon: <PencilLine size={14} />, label: "Write or edit" },
                                         { icon: <Globe size={14} />, label: "Look something up" },
                                     ].map((pill) => (
-                                        <button key={pill.label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 text-xs text-gray-400 hover:text-white transition-all">
+                                        <button key={pill.label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent/50 border border-border hover:border-foreground/20 hover:bg-accent text-xs text-muted-foreground hover:text-foreground transition-all">
                                             {pill.icon}
                                             <span>{pill.label}</span>
                                         </button>
@@ -844,18 +930,18 @@ export default function Dashboard() {
                                     >
                                         {msg.role === 'user' && editingMsgIdx !== idx && (
                                             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mr-2">
-                                                <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+                                                <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-1.5 bg-accent hover:bg-accent/80 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
                                                     <Edit2 size={14} />
                                                 </button>
-                                                <button onClick={() => handleDeleteMessage(idx)} className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400 transition-colors">
+                                                <button onClick={() => handleDeleteMessage(idx)} className="p-1.5 bg-accent hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
                                                     <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         )}
                                         <div className={`max-w-[92%] lg:max-w-[80%] p-3 lg:p-4 rounded-2xl transition-all duration-500 relative ${
                                             msg.role === 'user' 
-                                            ? 'bg-white/5 border border-white/10 text-white' 
-                                            : 'text-gray-200'
+                                            ? 'bg-accent border border-border text-foreground' 
+                                            : 'text-foreground/90'
                                         } ${highlightedMsgIdx === idx ? 'ring-2 ring-purple-500 bg-purple-500/20 scale-[1.02]' : ''}`}>
                                             {msg.role === 'assistant' && (
                                                 <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-2">
@@ -867,16 +953,16 @@ export default function Dashboard() {
                                                     <textarea 
                                                         value={editMsgText}
                                                         onChange={(e) => setEditMsgText(e.target.value)}
-                                                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-sm text-white resize-none outline-none focus:ring-2 focus:ring-purple-500/50"
+                                                        className="w-full bg-accent border border-border rounded-xl p-3 text-sm text-foreground resize-none outline-none focus:ring-2 focus:ring-purple-500/50"
                                                         rows={3}
                                                     />
                                                     <div className="flex justify-end gap-2 mt-1">
-                                                        <button onClick={() => setEditingMsgIdx(null)} className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">Cancel</button>
+                                                        <button onClick={() => setEditingMsgIdx(null)} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-accent">Cancel</button>
                                                         <button onClick={() => handleSaveEdit(idx)} className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors">Save</button>
                                                     </div>
                                                 </div>
                                             ) : msg.content.startsWith('[IMAGE]') ? (
-                                                <img src={msg.content.replace('[IMAGE]', '')} alt="Generated Image" className="max-w-full rounded-lg shadow-lg border border-white/10" />
+                                                <img src={msg.content.replace('[IMAGE]', '')} alt="Generated Image" className="max-w-full rounded-lg shadow-lg border border-border" />
                                             ) : (
                                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                                             )}
@@ -885,7 +971,7 @@ export default function Dashboard() {
                                 ))}
                                 {isTyping && (
                                     <div className="flex justify-start animate-pulse">
-                                        <div className="max-w-[80%] p-4 rounded-2xl text-gray-400 text-sm">
+                                        <div className="max-w-[80%] p-4 rounded-2xl text-muted-foreground text-sm">
                                             IndusGPT is thinking...
                                         </div>
                                     </div>
@@ -894,48 +980,48 @@ export default function Dashboard() {
                             </div>
 
                             {/* Bottom Input Area */}
-                            <div className={`fixed bottom-0 left-0 right-0 transition-all duration-300 bg-[#0d0d0f]/80 backdrop-blur-xl border-t border-white/5 p-3 lg:p-4 z-20 ${isSidebarOpen ? 'lg:left-[260px]' : 'lg:left-[68px]'}`}>
+                            <div className={`fixed bottom-0 left-0 right-0 transition-all duration-300 bg-background/80 backdrop-blur-xl border-t border-border p-3 lg:p-4 z-20 ${isSidebarOpen ? 'lg:left-[260px]' : 'lg:left-[68px]'}`}>
                                 <div className="max-w-3xl mx-auto relative group">
-                                    <div className="relative flex items-center bg-[#161618] border border-white/10 rounded-2xl shadow-xl transition-all pl-3">
+                                    <div className="relative flex items-center bg-card border border-border rounded-2xl shadow-xl transition-all pl-3">
                                         <div className="relative">
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     setIsPlusMenuOpen(!isPlusMenuOpen)
                                                 }}
-                                                className={`p-2 rounded-lg hover:bg-white/5 transition-colors ${isPlusMenuOpen ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+                                                className={`p-2 rounded-lg hover:bg-accent transition-colors ${isPlusMenuOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                                             >
                                                 <Plus size={18} />
                                             </button>
                                             
                                             {isPlusMenuOpen && (
                                                 <div 
-                                                    className="absolute bottom-full left-0 mb-2 w-64 bg-[#2f2f2f] border border-white/10 rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
+                                                    className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                         <Paperclip size={16} />
                                                         <span>Add photos & files</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                         <ImageIcon size={16} />
                                                         <span>Create image</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                         <Lightbulb size={16} />
                                                         <span>Thinking</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors">
+                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                                         <Telescope size={16} />
                                                         <span>Deep research</span>
                                                     </button>
-                                                    <div className="h-[1px] bg-white/10 my-1 mx-3" />
-                                                    <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-gray-200 hover:bg-[#424242] transition-colors group">
+                                                    <div className="h-[1px] bg-border my-1 mx-3" />
+                                                    <button className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors group">
                                                         <div className="flex items-center gap-3">
                                                             <MoreHorizontal size={16} />
                                                             <span>More</span>
                                                         </div>
-                                                        <ChevronRight size={14} className="text-gray-500 group-hover:text-gray-300" />
+                                                        <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" />
                                                     </button>
                                                 </div>
                                             )}
@@ -946,11 +1032,11 @@ export default function Dashboard() {
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             onKeyDown={handleKeyDown}
-                                            className="w-full bg-transparent px-3 py-4 outline-none text-white placeholder-gray-500 resize-none h-14 max-h-[200px]"
+                                            className="w-full bg-transparent px-3 py-4 outline-none text-foreground placeholder-muted-foreground resize-none h-14 max-h-[200px]"
                                             rows={1}
                                         />
                                         <div className="flex items-center gap-2 pr-4 shrink-0">
-                                             <button className="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
+                                             <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
                                                 <Mic size={18} />
                                             </button>
                                             <button 
@@ -963,13 +1049,42 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="text-center mt-2">
-                                    <p className="text-[10px] text-gray-600 font-medium tracking-tight">IndusGPT can make mistakes. Check important info.</p>
+                                    <p className="text-[10px] text-muted-foreground/60 font-medium tracking-tight">IndusGPT can make mistakes. Check important info.</p>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
             </main>
+
+            {/* ─── Delete Chat Confirmation Modal ─── */}
+            {isDeleteChatModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-slide-up">
+                        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-4 mx-auto">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground text-center mb-2">Delete chat?</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-6">
+                            This will permanently delete this chat and all its messages. This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setIsDeleteChatModalOpen(false)}
+                                className="flex-1 px-4 py-2 rounded-xl border border-border text-foreground hover:bg-accent transition-colors text-sm font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={confirmDeleteChat}
+                                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-medium shadow-lg shadow-red-600/20"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ─── New Chat Modal ─── */}
             {isNewChatModalOpen && (
@@ -981,9 +1096,9 @@ export default function Dashboard() {
                     />
                     
                     {/* Modal Content */}
-                    <div className="relative w-full max-w-md bg-[#161618] border border-white/10 rounded-3xl shadow-2xl p-8 animate-slide-up">
-                        <h3 className="text-2xl font-bold text-white mb-2">Name your chat</h3>
-                        <p className="text-gray-400 text-sm mb-6">Give your conversation a title to help you find it later.</p>
+                    <div className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl p-8 animate-slide-up">
+                        <h3 className="text-2xl font-bold text-foreground mb-2">Name your chat</h3>
+                        <p className="text-muted-foreground text-sm mb-6">Give your conversation a title to help you find it later.</p>
                         
                         <div className="space-y-6">
                             <div className="relative group">
@@ -993,7 +1108,7 @@ export default function Dashboard() {
                                     value={newChatName}
                                     onChange={(e) => setNewChatName(e.target.value)}
                                     placeholder="e.g., Project Analysis"
-                                    className="relative w-full bg-[#0d0d0f] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-all"
+                                    className="relative w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground outline-none focus:border-blue-500/50 transition-all"
                                     autoFocus
                                     onKeyDown={(e) => e.key === 'Enter' && handleCreateChat()}
                                 />

@@ -13,7 +13,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="relative bg-[#05050a] border-t border-white/8 overflow-hidden">
+    <footer className="relative bg-background border-t border-border overflow-hidden">
       {/* Subtle glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
@@ -26,12 +26,12 @@ export function Footer() {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Zap size={15} className="text-white fill-white" />
               </div>
-              <span className="text-white font-bold text-xl tracking-tight">
+              <span className="text-foreground font-bold text-xl tracking-tight">
                 Indus<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GPT</span>
               </span>
             </Link>
 
-            <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               Your intelligent AI assistant for students, developers, and data analysts. Think faster. Build smarter.
             </p>
 
@@ -46,7 +46,7 @@ export function Footer() {
                 <a
                   key={i}
                   href={href}
-                  className="w-9 h-9 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+                  className="w-9 h-9 rounded-xl border border-border bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:border-border transition-all duration-200"
                 >
                   <Icon size={15} />
                 </a>
@@ -57,13 +57,13 @@ export function Footer() {
           {/* Links columns */}
           {Object.entries(FOOTER_LINKS).map(([category, links]) => (
             <div key={category} className="space-y-4">
-              <h3 className="text-sm font-semibold text-white tracking-wide">{category}</h3>
+              <h3 className="text-sm font-semibold text-foreground tracking-wide">{category}</h3>
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link}>
                     <a
                       href="#"
-                      className="text-sm text-gray-400 hover:text-white transition-colors duration-200"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
                     >
                       {link}
                     </a>
@@ -75,8 +75,8 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/8 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500">
+        <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
             © {currentYear} IndusGPT. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
@@ -84,7 +84,7 @@ export function Footer() {
               <a
                 key={link}
                 href="#"
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors duration-200"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
                 {link}
               </a>

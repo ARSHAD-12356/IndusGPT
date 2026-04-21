@@ -39,20 +39,20 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="relative pt-16 pb-28 bg-[#05050a] overflow-hidden">
+    <section id="features" className="relative pt-16 pb-28 bg-background overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">
             What can you do with{' '}
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               IndusGPT?
             </span>
           </h2>
-          <p className="text-gray-400 text-lg">Everything you need, all in one platform.</p>
+          <p className="text-muted-foreground text-lg">Everything you need, all in one platform.</p>
         </div>
 
         {/* Feature cards */}
@@ -60,7 +60,7 @@ export function FeaturesSection() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className={`group relative flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-sm shadow-xl transition-all duration-300 cursor-default overflow-hidden ${f.glow} hover:shadow-2xl ${f.border}`}
+              className={`group relative flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-border bg-card/50 hover:bg-accent backdrop-blur-sm shadow-xl transition-all duration-300 cursor-default overflow-hidden ${f.glow} hover:shadow-2xl ${f.border}`}
             >
               {/* Glow spot */}
               <div className={`absolute -top-8 -left-8 w-24 h-24 bg-gradient-to-br ${f.gradient} opacity-0 group-hover:opacity-10 rounded-full blur-2xl transition-opacity duration-500`} />
@@ -72,8 +72,8 @@ export function FeaturesSection() {
 
               {/* Text */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-3">{f.title}</h3>
-                <p className="text-base text-gray-400 leading-relaxed">{f.desc}</p>
+                <h3 className="text-lg font-semibold text-foreground mb-3">{f.title}</h3>
+                <p className="text-base text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             </div>
           ))}

@@ -46,14 +46,14 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
 
             {/* Back Button */}
             <Link 
                 href="/" 
-                className="fixed top-8 left-8 flex items-center text-gray-400 hover:text-white transition-colors z-50 group"
+                className="fixed top-8 left-8 flex items-center text-muted-foreground hover:text-foreground transition-colors z-50 group"
             >
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all">
+                <div className="w-10 h-10 rounded-full bg-accent border border-border flex items-center justify-center group-hover:bg-accent/80 group-hover:border-border transition-all">
                     <ArrowLeft size={20} />
                 </div>
             </Link>
@@ -63,11 +63,11 @@ export default function LoginPage() {
             <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/6 rounded-full blur-3xl pointer-events-none" />
 
             {/* Card */}
-            <div className="relative w-full max-w-5xl rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 flex lg:h-[600px] md:h-[550px]">
+            <div className="relative w-full max-w-5xl rounded-3xl overflow-hidden border border-border shadow-2xl flex lg:h-[600px] md:h-[550px]">
 
                 {/* Left Panel */}
-                <div className="hidden md:flex flex-col items-center justify-center w-1/2 relative overflow-hidden bg-black">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-black to-purple-950" />
+                <div className="hidden md:flex flex-col items-center justify-center w-1/2 relative overflow-hidden bg-background">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-950/20 via-background to-purple-950/20" />
                     <div className="absolute top-0 left-0 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl" />
                     <div className="absolute bottom-0 right-0 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl" />
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -76,16 +76,16 @@ export default function LoginPage() {
                             <Zap size={28} className="text-white fill-white" />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-bold text-white tracking-tight">
+                            <h2 className="text-3xl font-bold text-foreground tracking-tight">
                                 Indus<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GPT</span>
                             </h2>
-                            <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                            <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
                                 Your intelligent AI assistant.<br />Think faster. Build smarter.
                             </p>
                         </div>
                         <div className="flex flex-col gap-2 mt-4 w-full">
                             {['⚡ AI-powered answers', '💻 Code generation', '🔍 Research assistant'].map((f) => (
-                                <div key={f} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-gray-300">
+                                <div key={f} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent border border-border text-sm text-foreground/80">
                                     {f}
                                 </div>
                             ))}
@@ -94,17 +94,17 @@ export default function LoginPage() {
                 </div>
 
                 {/* Right Panel */}
-                <div className="w-full md:w-1/2 flex flex-col justify-between bg-[#0d0d0f] px-8 sm:px-12 py-10">
+                <div className="w-full md:w-1/2 flex flex-col justify-between bg-card px-8 sm:px-12 py-10">
                     <div className="flex md:hidden items-center gap-3 mb-8">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-blue-600/40">
                             <Zap size={16} className="text-white fill-white" />
                         </div>
-                        <span className="text-white font-bold text-xl">Indus<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GPT</span></span>
+                        <span className="text-foreground font-bold text-xl">Indus<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GPT</span></span>
                     </div>
 
                     <div className="my-auto">
-                        <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-2">Welcome back.</h1>
-                        <p className="text-gray-400 text-sm mb-10">Sign in to your account to continue.</p>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-2">Welcome back.</h1>
+                        <p className="text-muted-foreground text-sm mb-10">Sign in to your account to continue.</p>
 
                         {error && (
                             <div className="mb-4 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs">
@@ -119,7 +119,7 @@ export default function LoginPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-5 py-3.5 rounded-xl bg-white/5 border border-white/12 text-white placeholder-gray-500 text-sm outline-none focus:border-blue-500/60 focus:bg-white/8 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                                className="w-full px-5 py-3.5 rounded-xl bg-accent border border-border text-foreground placeholder-muted-foreground text-sm outline-none focus:border-blue-500/60 focus:bg-accent/80 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                             />
                             <div className="relative">
                                 <input
@@ -128,7 +128,7 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full px-5 py-3.5 pr-12 rounded-xl bg-white/5 border border-white/12 text-white placeholder-gray-500 text-sm outline-none focus:border-blue-500/60 focus:bg-white/8 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                                    className="w-full px-5 py-3.5 pr-12 rounded-xl bg-accent border border-border text-foreground placeholder-muted-foreground text-sm outline-none focus:border-blue-500/60 focus:bg-accent/80 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -148,30 +148,30 @@ export default function LoginPage() {
                         </form>
 
                         <div className="flex items-center gap-3 my-6">
-                            <div className="flex-1 h-px bg-white/10" />
-                            <span className="text-xs text-gray-500">or continue with</span>
-                            <div className="flex-1 h-px bg-white/10" />
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-xs text-muted-foreground">or continue with</span>
+                            <div className="flex-1 h-px bg-border" />
                         </div>
 
                         <div className="flex gap-3">
-                            <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/12 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all duration-200">
+                            <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-border bg-accent hover:bg-accent/80 text-muted-foreground hover:text-foreground text-sm font-medium transition-all duration-200">
                                 <span className="font-bold">G</span> Google
                             </button>
-                            <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/12 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all duration-200">
+                            <button type="button" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-border bg-accent hover:bg-accent/80 text-muted-foreground hover:text-foreground text-sm font-medium transition-all duration-200">
                                 <span className="font-bold">⌥</span> GitHub
                             </button>
                         </div>
 
-                        <p className="text-center text-sm text-gray-500 mt-8">
+                        <p className="text-center text-sm text-muted-foreground mt-8">
                             Don&apos;t have an account?{' '}
-                            <Link href="/signup" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">Sign up free</Link>
+                            <Link href="/signup" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">Sign up free</Link>
                         </p>
                     </div>
 
                     <div className="flex gap-4 justify-center mt-8">
-                        <a href="#" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Terms of Use</a>
-                        <span className="text-gray-700">|</span>
-                        <a href="#" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Privacy Policy</a>
+                        <a href="#" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">Terms of Use</a>
+                        <span className="text-border">|</span>
+                        <a href="#" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">Privacy Policy</a>
                     </div>
                 </div>
             </div>

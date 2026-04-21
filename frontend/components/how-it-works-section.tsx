@@ -28,19 +28,19 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative pt-16 pb-28 bg-[#07070f] overflow-hidden">
+    <section id="how-it-works" className="relative pt-16 pb-28 bg-background overflow-hidden">
       {/* Decorative background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/10 to-transparent pointer-events-none" />
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">
             How It Works
           </h2>
-          <p className="text-gray-400 text-lg">
+          <p className="text-muted-foreground text-lg">
             Everything you need, all in{' '}
-            <span className="text-white font-semibold italic">one</span>{' '}
+            <span className="text-foreground font-semibold italic">one</span>{' '}
             platform.
           </p>
         </div>
@@ -50,9 +50,9 @@ export function HowItWorksSection() {
           {STEPS.map((step, i) => (
             <div key={step.title} className="flex flex-col lg:flex-row items-center flex-1">
               {/* Card */}
-              <div className="group flex-1 w-full flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:border-white/15 relative overflow-hidden">
+              <div className="group flex-1 w-full flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-border bg-card/50 hover:bg-accent backdrop-blur-sm transition-all duration-300 hover:border-border/80 relative overflow-hidden">
                 {/* Step number - subtle background */}
-                <span className="absolute top-4 right-5 text-6xl font-black text-white/[0.04] select-none leading-none">{step.step}</span>
+                <span className="absolute top-4 right-5 text-6xl font-black text-foreground/[0.04] select-none leading-none">{step.step}</span>
 
                 {/* Icon */}
                 <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg`}>
@@ -61,17 +61,17 @@ export function HowItWorksSection() {
 
                 {/* Text */}
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                  <p className="text-base text-gray-400 leading-relaxed">{step.desc}</p>
+                  <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed">{step.desc}</p>
                 </div>
               </div>
 
               {/* Connector arrow */}
               {i < STEPS.length - 1 && (
                 <div className="flex lg:flex-col items-center justify-center px-4 py-3 lg:py-0 lg:px-6 shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                    <ArrowRight size={14} className="text-blue-400 lg:block hidden" />
-                    <ArrowRight size={14} className="text-blue-400 lg:hidden rotate-90" />
+                  <div className="w-8 h-8 rounded-full bg-accent border border-border flex items-center justify-center">
+                    <ArrowRight size={14} className="text-blue-500 lg:block hidden" />
+                    <ArrowRight size={14} className="text-blue-500 lg:hidden rotate-90" />
                   </div>
                 </div>
               )}
