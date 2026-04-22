@@ -99,10 +99,19 @@ app.post("/api/chat", async (req: Request, res: Response) => {
 
         // Add history if provided
         if (history && Array.isArray(history)) {
-            // Filter out any messages that might have images in the history if they are too large, 
-            // but for now, we'll just pass them through.
             // Only take the last 10 messages to keep context window manageable
-            const limitedHistory = history.slice(-10);
+            const limitedHistory = history.slice(-10).map((msg: any) => {
+                if (msg.image) {
+                    return {
+                        role: msg.role,
+                        content: [
+                            { type: "text", text: msg.content || "" },
+                            { type: "image_url", image_url: { url: msg.image } }
+                        ]
+                    };
+                }
+                return { role: msg.role, content: msg.content };
+            });
             messages = [...messages, ...limitedHistory];
         }
 
@@ -119,7 +128,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
             messages.push({ role: "user", content: message });
         }
 
-    console.log("Sending request to OpenRouter with model: google/gemini-flash-1.5");
+    console.log("Sending request to OpenRouter with model: openrouter/free");
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -129,7 +138,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "google/gemini-2.0-flash-exp:free",
+        "model": "openrouter/free",
         "messages": messages,
       })
     });

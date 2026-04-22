@@ -119,7 +119,10 @@ export default function Dashboard() {
                 }
             );
 
-            if (!response.ok) throw new Error("Failed to regenerate response");
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to regenerate response: ${response.status} - ${errorText}`);
+            }
 
             const data = await response.json();
             const newContent = data.content || "No response received.";
