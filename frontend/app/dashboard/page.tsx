@@ -7,7 +7,8 @@ import {
     ChevronDown, User, Settings, LogOut,
     Mic, Send, Globe, Sparkles, PencilLine,
     Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, PinOff, Archive,
-    PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu
+    PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu,
+    Copy, RotateCcw
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
 import { LoginSignupModal } from '../../components/LoginSignupModal'
@@ -28,7 +29,7 @@ export default function Dashboard() {
     const [chats, setChats] = useState<{ _id: string; name: string; isPinned?: boolean; isArchived?: boolean }[]>([])
     const [activeChat, setActiveChat] = useState<{ _id: string; name: string } | null>(null)
     const [message, setMessage] = useState('')
-    const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([])
+    const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string, image?: string }[]>([])
     const [hasStarted, setHasStarted] = useState(false)
     const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -45,6 +46,7 @@ export default function Dashboard() {
     const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false)
     const [chatIdToDelete, setChatIdToDelete] = useState<string | null>(null)
     const [isArchivedOpen, setIsArchivedOpen] = useState(false)
+    const [pastedImage, setPastedImage] = useState<string | null>(null)
 
     const openSettings = (tab: string) => {
         setSettingsActiveTab(tab)
@@ -81,6 +83,58 @@ export default function Dashboard() {
     // Edit Message State
     const [editingMsgIdx, setEditingMsgIdx] = useState<number | null>(null)
     const [editMsgText, setEditMsgText] = useState('')
+
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        // Optionally add toast notification here
+    }
+
+    const handleRegenerate = async (idx: number) => {
+        // Find the last user message before this assistant message
+        const userMsgIdx = idx - 1;
+        if (userMsgIdx < 0 || messages[userMsgIdx].role !== 'user') return;
+
+        const userMsg = messages[userMsgIdx];
+        
+        // Clear current content and show loading state
+        setMessages(prev => {
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], content: "### Regenerating...\nThinking about a better response for you..." };
+            return updated;
+        });
+
+        setIsTyping(true);
+
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        message: userMsg.content, 
+                        image: userMsg.image,
+                        history: messages.slice(0, userMsgIdx) // Send history before this prompt
+                    }),
+                }
+            );
+
+            if (!response.ok) throw new Error("Failed to regenerate response");
+
+            const data = await response.json();
+            const newContent = data.content || "No response received.";
+
+            setMessages(prev => {
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], content: newContent };
+                return updated;
+            });
+        } catch (error) {
+            console.error("Regeneration Error:", error);
+        } finally {
+            setIsTyping(false);
+        }
+    }
 
     const handleDeleteMessage = async (idx: number) => {
         let updatedMsgs: any[] = [];
@@ -229,9 +283,10 @@ export default function Dashboard() {
             }
         }
 
-        const newMessages: { role: 'user' | 'assistant', content: string }[] = [...messages, { role: 'user', content: userMsg }]
+        const newMessages: { role: 'user' | 'assistant', content: string, image?: string }[] = [...messages, { role: 'user', content: userMsg, image: pastedImage || undefined }]
         setMessages(newMessages)
         setMessage('')
+        setPastedImage(null)
         setHasStarted(true)
         setIsTyping(true)
         const startTime = Date.now()
@@ -294,7 +349,11 @@ export default function Dashboard() {
                         headers: {
                             "Content-Type": "application/json",
                         },
-                        body: JSON.stringify({ message: userMsg }),
+                        body: JSON.stringify({ 
+                            message: userMsg, 
+                            image: pastedImage,
+                            history: messages // Send previous messages as history
+                        }),
                     }
                 );
 
@@ -307,7 +366,7 @@ export default function Dashboard() {
                 responseText = data.content || "No response received."
             }
 
-            const finalMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, {
+            const finalMessages: { role: 'user' | 'assistant', content: string, image?: string }[] = [...newMessages, {
                 role: 'assistant',
                 content: responseText
             }]
@@ -322,7 +381,7 @@ export default function Dashboard() {
             }
         } catch (error: any) {
             console.error("Backend API Error:", error)
-            const errorMessages: { role: 'user' | 'assistant', content: string }[] = [...newMessages, {
+            const errorMessages: { role: 'user' | 'assistant', content: string, image?: string }[] = [...newMessages, {
                 role: 'assistant',
                 content: error.message || "Something went wrong"
             }]
@@ -350,6 +409,51 @@ export default function Dashboard() {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             handleSendMessage()
+        }
+    }
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const clipboardData = e.clipboardData;
+        if (!clipboardData) return;
+
+        const items = clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 1024;
+                            const MAX_HEIGHT = 1024;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx?.drawImage(img, 0, 0, width, height);
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            setPastedImage(dataUrl);
+                        };
+                        img.src = event.target?.result as string;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
         }
     }
 
@@ -964,11 +1068,28 @@ export default function Dashboard() {
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
                                     <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-2xl min-h-[120px] transition-all">
+                                        {pastedImage && (
+                                            <div className="relative ml-4 mt-4 group/image shrink-0 overflow-visible" style={{ width: '56px', height: '56px' }}>
+                                                <img 
+                                                    src={pastedImage} 
+                                                    alt="Pasted" 
+                                                    className="w-full h-full object-cover rounded-xl border border-border shadow-sm" 
+                                                />
+                                                <button 
+                                                    onClick={() => setPastedImage(null)}
+                                                    className="absolute w-5 h-5 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
+                                                    style={{ top: '-8px', right: '-8px' }}
+                                                >
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        )}
                                         <textarea
                                             placeholder="Ask anything..."
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             onKeyDown={handleKeyDown}
+                                            onPaste={handlePaste}
                                             className="w-full bg-transparent p-5 pb-16 outline-none text-foreground placeholder-muted-foreground resize-none h-auto max-h-[400px]"
                                             rows={1}
                                         />
@@ -1028,13 +1149,18 @@ export default function Dashboard() {
                                             </button>
                                         </div>
 
-                                        <button
-                                            onClick={handleSendMessage}
-                                            disabled={!message.trim()}
-                                            className={`absolute bottom-4 right-4 p-2.5 rounded-xl transition-all ${message.trim() ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95' : 'bg-accent text-muted-foreground cursor-not-allowed'}`}
-                                        >
-                                            <Send size={20} />
-                                        </button>
+                                        <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                                            <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                                                <Mic size={18} />
+                                            </button>
+                                            <button
+                                                onClick={handleSendMessage}
+                                                disabled={!message.trim() && !pastedImage}
+                                                className={`p-2 rounded-xl transition-all ${message.trim() || pastedImage ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95' : 'bg-accent text-muted-foreground cursor-not-allowed'}`}
+                                            >
+                                                <Send size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1061,20 +1187,14 @@ export default function Dashboard() {
                                     <div
                                         key={idx}
                                         ref={(el) => { messageRefs.current[idx] = el }}
-                                        className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up transition-all duration-500`}
+                                        className={`group flex ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 animate-slide-up transition-all duration-500 mb-6`}
                                     >
-                                        {msg.role === 'user' && editingMsgIdx !== idx && (
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mr-2">
-                                                <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-1.5 bg-accent hover:bg-accent/80 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
-                                                    <Edit2 size={14} />
-                                                </button>
-                                                <button onClick={() => handleDeleteMessage(idx)} className="p-1.5 bg-accent hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
+                                        <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-secondary/80 text-foreground rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
+                                            {msg.image && (
+                                                <div className="mb-2 max-w-sm">
+                                                    <img src={msg.image} alt="Message attachment" className="rounded-lg w-full h-auto border border-white/5 shadow-lg" />
+                                                </div>
+                                            )}
                                             {editingMsgIdx === idx ? (
                                                 <div className="flex flex-col gap-2 min-w-[200px]">
                                                     <textarea
@@ -1119,6 +1239,32 @@ export default function Dashboard() {
                                                 </div>
                                             )}
                                         </div>
+
+                                        <div className="flex flex-row gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0">
+                                            <button onClick={() => handleCopy(msg.content)} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all" title="Copy">
+                                                <Copy size={14} />
+                                            </button>
+                                            {msg.role === 'user' ? (
+                                                <>
+                                                    <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all" title="Edit">
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteMessage(idx)} className="p-2 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-500 transition-all" title="Delete">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="relative group/tooltip">
+                                                    <button onClick={() => handleRegenerate(idx)} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all">
+                                                        <RotateCcw size={14} />
+                                                    </button>
+                                                    <div className={`absolute bottom-full ${msg.role === 'assistant' ? 'left-0' : 'right-0'} mb-2 px-2 py-1 bg-popover text-popover-foreground text-[10px] font-medium rounded border border-border whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all scale-95 group-hover/tooltip:scale-100 shadow-xl z-50`}>
+                                                        See another response
+                                                        <div className={`absolute top-full ${msg.role === 'assistant' ? 'left-2' : 'right-2'} -mt-1 border-4 border-transparent border-t-popover`}></div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                                 {isTyping && (
@@ -1139,7 +1285,24 @@ export default function Dashboard() {
                             {/* Bottom Input Area */}
                             <div className={`fixed bottom-0 left-0 right-0 transition-all duration-300 bg-background/80 backdrop-blur-xl border-t border-border p-3 lg:p-4 z-20 ${isSidebarOpen ? 'lg:left-[260px]' : 'lg:left-[68px]'}`}>
                                 <div className="max-w-3xl mx-auto relative group">
-                                    <div className="relative flex items-center bg-card border border-border rounded-2xl shadow-xl transition-all pl-3">
+                                    <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-xl transition-all">
+                                        {pastedImage && (
+                                            <div className="relative ml-3 mt-3 group/image shrink-0 overflow-visible" style={{ width: '48px', height: '48px' }}>
+                                                <img 
+                                                    src={pastedImage} 
+                                                    alt="Pasted" 
+                                                    className="w-full h-full object-cover rounded-lg border border-border shadow-sm" 
+                                                />
+                                                <button 
+                                                    onClick={() => setPastedImage(null)}
+                                                    className="absolute w-4 h-4 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
+                                                    style={{ top: '-6px', right: '-6px' }}
+                                                >
+                                                    <X size={8} />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center pl-3">
                                         <div className="relative">
                                             <button
                                                 onClick={(e) => {
@@ -1189,6 +1352,7 @@ export default function Dashboard() {
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             onKeyDown={handleKeyDown}
+                                            onPaste={handlePaste}
                                             className="w-full bg-transparent px-3 py-4 outline-none text-foreground placeholder-muted-foreground resize-none h-14 max-h-[200px]"
                                             rows={1}
                                         />
@@ -1203,6 +1367,7 @@ export default function Dashboard() {
                                                 <Send size={16} />
                                             </button>
                                         </div>
+                                    </div>
                                     </div>
                                 </div>
                                 <div className="text-center mt-2">
