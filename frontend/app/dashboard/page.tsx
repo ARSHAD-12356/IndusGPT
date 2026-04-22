@@ -167,21 +167,62 @@ export default function Dashboard() {
     }
 
     const handleSaveEdit = async (idx: number) => {
-        const updated = [...messages];
+        const updated = [...messages.slice(0, idx + 1)]; // Truncate history after the edited message
         updated[idx].content = editMsgText;
         setMessages(updated);
         setEditingMsgIdx(null);
+        setIsTyping(true);
 
-        if (activeChat?._id) {
-            try {
+        try {
+            // First sync the truncated history to the backend
+            if (activeChat?._id) {
                 await fetch(`/api/chats/${activeChat._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: updated })
                 });
-            } catch (err) {
-                console.error('Failed to sync message edit:', err);
             }
+
+            // Then get a new response for the edited prompt
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        message: editMsgText, 
+                        image: updated[idx].image,
+                        history: updated.slice(0, idx) 
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to get response: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            const aiResponse = { 
+                role: 'assistant' as const, 
+                content: data.content || "No response received." 
+            };
+
+            const finalMessages = [...updated, aiResponse];
+            setMessages(finalMessages);
+
+            // Sync the final conversation state
+            if (activeChat?._id) {
+                await fetch(`/api/chats/${activeChat._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: finalMessages })
+                });
+            }
+        } catch (err) {
+            console.error('Failed to handle edit send:', err);
+        } finally {
+            setIsTyping(false);
         }
     }
 
@@ -1203,13 +1244,13 @@ export default function Dashboard() {
                                                     <textarea
                                                         value={editMsgText}
                                                         onChange={(e) => setEditMsgText(e.target.value)}
-                                                        className="bg-background/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-white/30 w-full"
+                                                        className="bg-accent/50 border border-border rounded-xl p-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-blue-500/20 transition-all w-full min-h-[100px]"
                                                         rows={3}
                                                         autoFocus
                                                     />
                                                     <div className="flex justify-end gap-2">
-                                                        <button onClick={() => setEditingMsgIdx(null)} className="text-[10px] text-white/60 hover:text-white px-2 py-1">Cancel</button>
-                                                        <button onClick={() => handleSaveEdit(idx)} className="text-[10px] bg-white/20 hover:bg-white/30 rounded px-3 py-1 font-medium transition-colors">Save</button>
+                                                        <button onClick={() => setEditingMsgIdx(null)} className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">Cancel</button>
+                                                        <button onClick={() => handleSaveEdit(idx)} className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-1.5 font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95">Send</button>
                                                     </div>
                                                 </div>
                                             ) : (
