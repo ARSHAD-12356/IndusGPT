@@ -17,7 +17,7 @@ export function Footer() {
       {/* Subtle glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <div className="max-w-[88rem] mx-auto px-6 py-16">
         <div className="grid md:grid-cols-5 gap-12 mb-14">
 
           {/* Brand column */}

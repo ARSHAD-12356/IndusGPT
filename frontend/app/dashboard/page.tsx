@@ -8,7 +8,7 @@ import {
     Mic, Send, Globe, Sparkles, PencilLine,
     Trash2, Edit2, Check, X, MoreHorizontal, Share, Users, Pin, PinOff, Archive,
     PanelLeftClose, PanelLeft, MessageSquare, Paperclip, Lightbulb, Telescope, ChevronRight, Menu,
-    Copy, RotateCcw
+    Copy, RotateCcw, ThumbsUp, ThumbsDown, Share2, Volume2, Square, PlusSquare
 } from 'lucide-react'
 import { SettingsModal } from '../../components/SettingsModal'
 import { LoginSignupModal } from '../../components/LoginSignupModal'
@@ -25,6 +25,8 @@ export default function Dashboard() {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false)
     const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
+    const [isReadingAloud, setIsReadingAloud] = useState<number | null>(null)
+    const [activeMenuIdx, setActiveMenuIdx] = useState<number | null>(null)
     const [newChatName, setNewChatName] = useState('')
     const [chats, setChats] = useState<{ _id: string; name: string; isPinned?: boolean; isArchived?: boolean }[]>([])
     const [activeChat, setActiveChat] = useState<{ _id: string; name: string } | null>(null)
@@ -36,6 +38,8 @@ export default function Dashboard() {
     const [editingChatId, setEditingChatId] = useState<string | null>(null)
     const [editingChatName, setEditingChatName] = useState('')
     const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [activeMode, setActiveMode] = useState<'normal' | 'thinking' | 'research'>('normal')
     const [chatSearchQuery, setChatSearchQuery] = useState('')
     const [isChatSearchActive, setIsChatSearchActive] = useState(false)
 
@@ -106,8 +110,9 @@ export default function Dashboard() {
         setIsTyping(true);
 
         try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                `${apiUrl}/api/chat`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -174,6 +179,7 @@ export default function Dashboard() {
         setIsTyping(true);
 
         try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
             // First sync the truncated history to the backend
             if (activeChat?._id) {
                 await fetch(`/api/chats/${activeChat._id}`, {
@@ -185,7 +191,7 @@ export default function Dashboard() {
 
             // Then get a new response for the edited prompt
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                `${apiUrl}/api/chat`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -271,7 +277,84 @@ export default function Dashboard() {
         }
     }, [router])
 
+    // Pre-load voices for TTS
+    useEffect(() => {
+        const loadVoices = () => {
+            window.speechSynthesis.getVoices()
+        }
+        loadVoices()
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices
+        }
+    }, [])
+
     if (!user) return null
+
+    const handleReadAloud = (text: string, idx: number) => {
+        if (isReadingAloud === idx) {
+            window.speechSynthesis.cancel()
+            setIsReadingAloud(null)
+            return
+        }
+
+        window.speechSynthesis.cancel()
+        const utterance = new SpeechSynthesisUtterance(text)
+        
+        // Better female voice selection logic
+        const voices = window.speechSynthesis.getVoices()
+        const femaleVoice = voices.find(v => 
+            v.name.toLowerCase().includes('female') || 
+            v.name.toLowerCase().includes('woman') ||
+            v.name.toLowerCase().includes('zira') || 
+            v.name.toLowerCase().includes('samantha') ||
+            v.name.toLowerCase().includes('google uk english female') ||
+            v.name.toLowerCase().includes('microsoft zira') ||
+            v.name.toLowerCase().includes('natural') // Often high quality female
+        )
+        
+        if (femaleVoice) {
+            utterance.voice = femaleVoice
+        } else {
+            // Fallback: try to find any voice that isn't the first default if it sounds male
+            const fallback = voices.find(v => v.lang.startsWith('en') && v !== voices[0])
+            if (fallback) utterance.voice = fallback
+        }
+        
+        utterance.rate = 1.0
+        utterance.pitch = 1.1 // Slightly higher pitch for a more feminine tone
+        
+        utterance.onend = () => setIsReadingAloud(null)
+        utterance.onerror = () => setIsReadingAloud(null)
+        
+        window.speechSynthesis.speak(utterance)
+        setIsReadingAloud(idx)
+    }
+
+    const handleBranchChat = async (idx: number) => {
+        const branchMessages = messages.slice(0, idx + 1)
+        const branchName = `Branch of ${activeChat?.name || 'Chat'}`
+        
+        try {
+            const response = await fetch('/api/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userId: user?.id, 
+                    name: branchName,
+                    messages: branchMessages 
+                })
+            })
+            const data = await response.json()
+            if (data.chat) {
+                setChats([data.chat, ...chats])
+                setActiveChat(data.chat)
+                setMessages(branchMessages)
+                setActiveMenuIdx(null)
+            }
+        } catch (err) {
+            console.error('Failed to branch chat:', err)
+        }
+    }
 
     const handleCreateChat = async () => {
         if (newChatName.trim()) {
@@ -302,7 +385,13 @@ export default function Dashboard() {
     const handleSendMessage = async () => {
         if (!message.trim()) return
 
-        const userMsg = message.trim()
+        let userMsg = message.trim()
+        if (activeMode === 'thinking') {
+            userMsg = `[THINKING MODE] ${userMsg}`
+        } else if (activeMode === 'research') {
+            userMsg = `[RESEARCH MODE] ${userMsg}`
+        }
+        setActiveMode('normal') // Reset mode after sending
         let responseText = ""
 
         let currentChatId = activeChat?._id
@@ -367,7 +456,8 @@ export default function Dashboard() {
                 await new Promise(resolve => setTimeout(resolve, 1500));
             } else if (isImageRequest) {
                 // Send to Render backend for image generation
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-image`, {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+                const response = await fetch(`${apiUrl}/generate-image`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: userMsg })
@@ -386,8 +476,9 @@ export default function Dashboard() {
                 }
             } else {
                 // Send to Render Backend for regular text chat
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/chat`,
+                    `${apiUrl}/api/chat`,
                     {
                         method: "POST",
                         headers: {
@@ -454,6 +545,44 @@ export default function Dashboard() {
             e.preventDefault()
             handleSendMessage()
         }
+    }
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1024;
+                    const MAX_HEIGHT = 1024;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    setPastedImage(dataUrl);
+                };
+                img.src = event.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        }
+        setIsPlusMenuOpen(false);
     }
 
     const handlePaste = (e: React.ClipboardEvent) => {
@@ -596,6 +725,15 @@ export default function Dashboard() {
 
     return (
         <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
+
+            {/* ─── Hidden File Input ─── */}
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept="image/*" 
+                className="hidden" 
+            />
 
             {/* ─── Sidebar Overlay (Mobile) ─── */}
             {isMobileSidebarOpen && (
@@ -946,6 +1084,13 @@ export default function Dashboard() {
                 ) : (
                     <div className="flex flex-col h-full w-full items-center py-4">
                         <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mb-4"
+                            title="Expand sidebar"
+                        >
+                            <PanelLeft size={18} />
+                        </button>
+                        <button
                             onClick={() => setIsNewChatModalOpen(true)}
                             className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mt-2"
                         >
@@ -1128,6 +1273,17 @@ export default function Dashboard() {
                                                 </button>
                                             </div>
                                         )}
+                                        {activeMode !== 'normal' && (
+                                            <div className="flex items-center gap-2 ml-4 mt-4 animate-fade-in">
+                                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${activeMode === 'thinking' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-purple-500/10 border-purple-500/20 text-purple-500'}`}>
+                                                    {activeMode === 'thinking' ? <Brain size={14} /> : <Telescope size={14} />}
+                                                    <span>{activeMode} mode</span>
+                                                    <button onClick={() => setActiveMode('normal')} className="ml-1 hover:opacity-70">
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <textarea
                                             placeholder="Ask anything..."
                                             value={message}
@@ -1155,19 +1311,31 @@ export default function Dashboard() {
                                                         className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                        <button 
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                        >
                                                             <Paperclip size={16} />
                                                             <span>Add photos & files</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                        <button 
+                                                            onClick={() => { setMessage('Create an image of '); setIsPlusMenuOpen(false); }}
+                                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                        >
                                                             <ImageIcon size={16} />
                                                             <span>Create image</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                        <button 
+                                                            onClick={() => { setActiveMode('thinking'); setIsPlusMenuOpen(false); }}
+                                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                        >
                                                             <Lightbulb size={16} />
                                                             <span>Thinking</span>
                                                         </button>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                        <button 
+                                                            onClick={() => { setActiveMode('research'); setIsPlusMenuOpen(false); }}
+                                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                        >
                                                             <Telescope size={16} />
                                                             <span>Deep research</span>
                                                         </button>
@@ -1233,79 +1401,141 @@ export default function Dashboard() {
                                         ref={(el) => { messageRefs.current[idx] = el }}
                                         className={`group flex ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 animate-slide-up transition-all duration-500 mb-6`}
                                     >
-                                        <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-secondary/80 text-foreground rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
-                                            {msg.image && (
-                                                <div className="mb-2 max-w-sm">
-                                                    <img src={msg.image} alt="Message attachment" className="rounded-lg w-full h-auto border border-white/5 shadow-lg" />
-                                                </div>
-                                            )}
-                                            {editingMsgIdx === idx ? (
-                                                <div className="flex flex-col gap-2 min-w-[200px]">
-                                                    <textarea
-                                                        value={editMsgText}
-                                                        onChange={(e) => setEditMsgText(e.target.value)}
-                                                        className="bg-accent/50 border border-border rounded-xl p-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-blue-500/20 transition-all w-full min-h-[100px]"
-                                                        rows={3}
-                                                        autoFocus
-                                                    />
-                                                    <div className="flex justify-end gap-2">
-                                                        <button onClick={() => setEditingMsgIdx(null)} className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">Cancel</button>
-                                                        <button onClick={() => handleSaveEdit(idx)} className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-1.5 font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95">Send</button>
+                                            <div className={`flex ${msg.role === 'user' ? 'flex-row-reverse items-end' : 'flex-col'} gap-2`}>
+                                                <div className={`w-fit max-w-[85%] ${msg.role === 'user' ? 'bg-secondary/80 text-foreground rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
+                                                {msg.image && (
+                                                    <div className="mb-2 max-w-sm">
+                                                        <img src={msg.image} alt="Message attachment" className="rounded-lg w-full h-auto border border-white/5 shadow-lg" />
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div className="text-sm leading-relaxed prose prose-invert max-w-none prose-p:my-0 prose-pre:bg-black/20">
-                                                    <ReactMarkdown
-                                                        remarkPlugins={[remarkGfm]}
-                                                        components={{
-                                                            code: ({ node, inline, className, children, ...props }: any) => {
-                                                                const match = /language-(\w+)/.exec(className || '');
-                                                                return !inline && match ? (
-                                                                    <CodeBlock
-                                                                        language={match[1]}
-                                                                        value={String(children).replace(/\n$/, '')}
-                                                                        {...props}
-                                                                    />
-                                                                ) : (
-                                                                    <code className={className} {...props}>
-                                                                        {children}
-                                                                    </code>
-                                                                );
-                                                            },
-                                                            p: ({ children }) => <p className="mb-0 last:mb-0">{children}</p>,
-                                                            ul: ({ children }) => <ul className="list-disc pl-4 my-2">{children}</ul>,
-                                                            ol: ({ children }) => <ol className="list-decimal pl-4 my-2">{children}</ol>,
-                                                            blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic my-4">{children}</blockquote>,
-                                                        }}
-                                                    >
-                                                        {msg.content}
-                                                    </ReactMarkdown>
-                                                </div>
-                                            )}
-                                        </div>
+                                                )}
+                                                {editingMsgIdx === idx ? (
+                                                    <div className="flex flex-col gap-2 min-w-[200px]">
+                                                        <textarea
+                                                            value={editMsgText}
+                                                            onChange={(e) => setEditMsgText(e.target.value)}
+                                                            className="bg-accent/50 border border-border rounded-xl p-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-blue-500/20 transition-all w-full min-h-[100px]"
+                                                            rows={3}
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <button onClick={() => setEditingMsgIdx(null)} className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">Cancel</button>
+                                                            <button onClick={() => handleSaveEdit(idx)} className="text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-1.5 font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95">Send</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm leading-relaxed prose prose-invert max-w-none prose-p:my-0 prose-pre:bg-black/20">
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm]}
+                                                            components={{
+                                                                code: ({ node, inline, className, children, ...props }: any) => {
+                                                                    const match = /language-(\w+)/.exec(className || '');
+                                                                    return !inline && match ? (
+                                                                        <CodeBlock
+                                                                            language={match[1]}
+                                                                            value={String(children).replace(/\n$/, '')}
+                                                                            {...props}
+                                                                        />
+                                                                    ) : (
+                                                                        <code className={className} {...props}>
+                                                                            {children}
+                                                                        </code>
+                                                                    );
+                                                                },
+                                                                p: ({ children }) => <p className="mb-0 last:mb-0">{children}</p>,
+                                                                ul: ({ children }) => <ul className="list-disc pl-4 my-2">{children}</ul>,
+                                                                ol: ({ children }) => <ol className="list-decimal pl-4 my-2">{children}</ol>,
+                                                                blockquote: ({ children }) => <blockquote className="border-l-4 border-border pl-4 italic my-4">{children}</blockquote>,
+                                                            }}
+                                                        >
+                                                            {msg.content}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                        <div className="flex flex-row gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0">
-                                            <button onClick={() => handleCopy(msg.content)} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all" title="Copy">
-                                                <Copy size={14} />
-                                            </button>
-                                            {msg.role === 'user' ? (
-                                                <>
-                                                    <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all" title="Edit">
-                                                        <Edit2 size={14} />
+                                            {/* Action Icons BELOW the bubble for Assistant - PERMANENT */}
+                                            {msg.role === 'assistant' && !editingMsgIdx && (
+                                                <div className="flex items-center gap-1 mt-2 ml-1 transition-opacity">
+                                                    <div className="relative group/tooltip">
+                                                        <button 
+                                                            onClick={() => handleReadAloud(msg.content, idx)} 
+                                                            className={`p-1.5 rounded-lg transition-colors ${isReadingAloud === idx ? 'bg-blue-600 text-white' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                                                        >
+                                                            {isReadingAloud === idx ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
+                                                        </button>
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-[10px] rounded border border-border whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all scale-95 group-hover/tooltip:scale-100 shadow-xl z-50">
+                                                            {isReadingAloud === idx ? 'Stop reading' : 'Read aloud'}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="h-4 w-[1px] bg-border mx-1" />
+
+                                                    <button onClick={() => handleCopy(msg.content)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Copy">
+                                                        <Copy size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDeleteMessage(idx)} className="p-2 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-500 transition-all" title="Delete">
-                                                        <Trash2 size={14} />
+                                                    <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Good response">
+                                                        <ThumbsUp size={14} />
                                                     </button>
-                                                </>
-                                            ) : (
-                                                <div className="relative group/tooltip">
-                                                    <button onClick={() => handleRegenerate(idx)} className="p-2 hover:bg-accent rounded-xl text-muted-foreground hover:text-foreground transition-all">
+                                                    <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Bad response">
+                                                        <ThumbsDown size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleRegenerate(idx)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Regenerate">
                                                         <RotateCcw size={14} />
                                                     </button>
-                                                    <div className={`absolute bottom-full ${msg.role === 'assistant' ? 'left-0' : 'right-0'} mb-2 px-2 py-1 bg-popover text-popover-foreground text-[10px] font-medium rounded border border-border whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all scale-95 group-hover/tooltip:scale-100 shadow-xl z-50`}>
-                                                        See another response
-                                                        <div className={`absolute top-full ${msg.role === 'assistant' ? 'left-2' : 'right-2'} -mt-1 border-4 border-transparent border-t-popover`}></div>
+                                                    
+                                                    <div className="relative">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setActiveMenuIdx(activeMenuIdx === idx ? null : idx)
+                                                            }}
+                                                            className={`p-1.5 rounded-lg transition-colors ${activeMenuIdx === idx ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                                                        >
+                                                            <MoreHorizontal size={14} />
+                                                        </button>
+                                                        
+                                                        {activeMenuIdx === idx && (
+                                                            <div 
+                                                                className="absolute bottom-full left-0 mb-2 w-48 bg-card border border-border rounded-xl shadow-2xl py-1.5 z-50 animate-slide-up origin-bottom-left"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <button 
+                                                                    onClick={() => handleBranchChat(idx)}
+                                                                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                                >
+                                                                    <PlusSquare size={14} />
+                                                                    <span>Branch in new chat</span>
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleReadAloud(msg.content, idx)}
+                                                                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                                >
+                                                                    <Volume2 size={14} />
+                                                                    <span>Read aloud</span>
+                                                                </button>
+                                                                <div className="h-[1px] bg-border my-1" />
+                                                                <button className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                                    <Share2 size={14} />
+                                                                    <span>Share response</span>
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* User Icons on the side */}
+                                            {msg.role === 'user' && !editingMsgIdx && (
+                                                <div className="flex flex-row gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mb-1 shrink-0">
+                                                    <button onClick={() => handleCopy(msg.content)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-all" title="Copy">
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button onClick={() => { setEditingMsgIdx(idx); setEditMsgText(msg.content); }} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-all" title="Edit">
+                                                        <Edit2 size={13} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteMessage(idx)} className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 transition-all" title="Delete">
+                                                        <Trash2 size={13} />
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -1346,6 +1576,17 @@ export default function Dashboard() {
                                                 </button>
                                             </div>
                                         )}
+                                        {activeMode !== 'normal' && (
+                                            <div className="flex items-center gap-2 ml-4 mt-3 animate-fade-in">
+                                                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${activeMode === 'thinking' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-purple-500/10 border-purple-500/20 text-purple-500'}`}>
+                                                    {activeMode === 'thinking' ? <Brain size={12} /> : <Telescope size={12} />}
+                                                    <span>{activeMode} mode</span>
+                                                    <button onClick={() => setActiveMode('normal')} className="ml-1 hover:opacity-70">
+                                                        <X size={10} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex items-center pl-3">
                                         <div className="relative">
                                             <button
@@ -1363,19 +1604,31 @@ export default function Dashboard() {
                                                     className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border rounded-2xl shadow-2xl py-2 z-50 animate-slide-up origin-bottom-left text-left"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                    <button 
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                    >
                                                         <Paperclip size={16} />
                                                         <span>Add photos & files</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                    <button 
+                                                        onClick={() => { setMessage('Create an image of '); setIsPlusMenuOpen(false); }}
+                                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                    >
                                                         <ImageIcon size={16} />
                                                         <span>Create image</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                    <button 
+                                                        onClick={() => { setActiveMode('thinking'); setIsPlusMenuOpen(false); }}
+                                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                    >
                                                         <Lightbulb size={16} />
                                                         <span>Thinking</span>
                                                     </button>
-                                                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                                                    <button 
+                                                        onClick={() => { setActiveMode('research'); setIsPlusMenuOpen(false); }}
+                                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                                    >
                                                         <Telescope size={16} />
                                                         <span>Deep research</span>
                                                     </button>

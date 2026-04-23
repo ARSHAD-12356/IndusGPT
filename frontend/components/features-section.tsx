@@ -43,7 +43,7 @@ export function FeaturesSection() {
       {/* Background glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8">
+      <div className="relative z-10 max-w-[88rem] mx-auto px-6">
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">

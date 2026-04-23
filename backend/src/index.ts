@@ -138,7 +138,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "openrouter/free",
+        "model": "openrouter/auto",
         "messages": messages,
       })
     });

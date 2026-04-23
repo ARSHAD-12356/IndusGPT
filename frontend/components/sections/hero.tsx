@@ -1,17 +1,120 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Play, MessageSquare, Sparkles, Zap } from 'lucide-react'
 import { AnimatedWord } from './animated-headline'
 
-const CHAT_MESSAGES = [
-  { role: 'user', text: 'Explain binary search trees to me' },
-  { role: 'ai', text: 'A binary search tree (BST) is a node-based data structure where each node has at most two children...' },
-  { role: 'user', text: 'Can you write the code in Python?' },
-  { role: 'ai', text: "Sure! Here's a clean BST implementation in Python with insert and search methods." },
+const CHAT_STEPS = [
+  {
+    prompt: 'Explain binary search trees to me',
+    reply: 'A binary search tree stores sorted data where left nodes are smaller and right nodes are larger.'
+  },
+  {
+    prompt: 'Can you write Python code for insert?',
+    reply: 'Sure. Define a Node class, then recursively place values left or right based on comparisons.'
+  },
+  {
+    prompt: 'How do I search efficiently in BST?',
+    reply: 'At each step, compare target with current node and move left or right until found or null.'
+  },
+  {
+    prompt: 'When should I use AVL or Red-Black tree?',
+    reply: 'Use self-balancing trees when frequent inserts can skew depth and you need predictable O(log n).'
+  },
 ]
 
 export function HeroSection() {
+  const MAX_VISIBLE_TURNS = 2
+  const [activeStep, setActiveStep] = useState(0)
+  const [inputDraft, setInputDraft] = useState('')
+  const [visibleTurns, setVisibleTurns] = useState<Array<{ prompt: string; reply: string }>>([])
+  const [isReplyTyping, setIsReplyTyping] = useState(false)
+  const [isSendPulsing, setIsSendPulsing] = useState(false)
+
+  useEffect(() => {
+    let isCancelled = false
+    const step = CHAT_STEPS[activeStep]
+    let promptIndex = 0
+    const promptSpeedMin = 26
+    const promptSpeedMax = 42
+    const replySpeedMin = 18
+    const replySpeedMax = 30
+    const pauseAfterPrompt = 260
+    const pauseAfterReply = 1400
+    const pauseBeforeReplyTyping = 250
+
+    setInputDraft('')
+    setIsReplyTyping(false)
+
+    const randomDelay = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min
+
+    const typePrompt = () => {
+      const tick = () => {
+        if (isCancelled) return
+        promptIndex += 1
+        setInputDraft(step.prompt.slice(0, promptIndex))
+        if (promptIndex >= step.prompt.length) {
+          window.setTimeout(() => {
+            if (isCancelled) return
+            setIsSendPulsing(true)
+            setVisibleTurns((prev) => {
+              const next = [...prev, { prompt: step.prompt, reply: '' }]
+              return next.slice(-MAX_VISIBLE_TURNS)
+            })
+            setInputDraft('')
+            window.setTimeout(() => {
+              if (isCancelled) return
+              setIsSendPulsing(false)
+            }, 220)
+            window.setTimeout(() => {
+              if (isCancelled) return
+              setIsReplyTyping(true)
+              typeReply()
+            }, pauseBeforeReplyTyping)
+          }, pauseAfterPrompt)
+          return
+        }
+        window.setTimeout(tick, randomDelay(promptSpeedMin, promptSpeedMax))
+      }
+
+      tick()
+    }
+
+    const typeReply = () => {
+      let replyIndex = 0
+      const tick = () => {
+        if (isCancelled) return
+        replyIndex += 1
+        const partialReply = step.reply.slice(0, replyIndex)
+        setVisibleTurns((prev) => {
+          if (prev.length === 0) return prev
+          const next = [...prev]
+          next[next.length - 1] = { ...next[next.length - 1], reply: partialReply }
+          return next
+        })
+        if (replyIndex >= step.reply.length) {
+          setIsReplyTyping(false)
+          window.setTimeout(() => {
+            if (isCancelled) return
+            setActiveStep((prev) => (prev + 1) % CHAT_STEPS.length)
+          }, pauseAfterReply)
+          return
+        }
+        window.setTimeout(tick, randomDelay(replySpeedMin, replySpeedMax))
+      }
+
+      tick()
+    }
+
+    typePrompt()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [activeStep, MAX_VISIBLE_TURNS])
+
   return (
     <section className="relative min-h-screen flex flex-col overflow-hidden bg-background">
       {/* Background glow orbs */}
@@ -20,7 +123,7 @@ export function HeroSection() {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[900px] h-[300px] bg-indigo-600/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* ── TWO-COLUMN HERO ── */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-10 pt-24 lg:pt-28 pb-10 flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-14">
+      <div className="relative z-10 w-full max-w-[88rem] mx-auto px-4 lg:px-6 pt-16 lg:pt-20 pb-10 flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-14">
 
         {/* ── LEFT: Content ── */}
         <div className="flex-1 flex flex-col items-start text-left max-w-xl">
@@ -52,7 +155,7 @@ export function HeroSection() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <Link href="/signup">
-              <button className="group flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-white text-sm
+              <button className="group flex items-center gap-2 px-7 py-3.5 rounded-lg font-semibold text-white text-sm
                 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500
                 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.03]
                 transition-all duration-300">
@@ -60,7 +163,7 @@ export function HeroSection() {
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </Link>
-            <button className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-sm text-foreground/80 hover:text-foreground
+            <button className="flex items-center gap-2.5 px-7 py-3.5 rounded-lg font-semibold text-sm text-foreground/80 hover:text-foreground
               border border-border hover:border-border/80 bg-accent/50 hover:bg-accent
               transition-all duration-300">
               <div className="w-5 h-5 rounded-full bg-accent/80 flex items-center justify-center">
@@ -101,42 +204,46 @@ export function HeroSection() {
             </div>
 
             {/* Chat messages */}
-            <div className="flex flex-col gap-3.5 p-6">
-              {CHAT_MESSAGES.map((msg, i) => (
-                <div key={i} className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  {msg.role === 'ai' && (
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-blue-500/30">
-                      <Sparkles size={12} className="text-white" />
+            <div className="h-[300px] overflow-hidden flex flex-col gap-3.5 p-6">
+              {visibleTurns.map((turn, i) => (
+                <div key={`${turn.prompt}-${i}`} className="flex flex-col gap-3.5 transition-all duration-500">
+                  <div className={`flex items-start gap-3 flex-row-reverse ${i === visibleTurns.length - 1 ? 'animate-in fade-in slide-in-from-bottom-2 duration-300' : ''}`}>
+                    <div className="max-w-[78%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed bg-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-100 rounded-tr-sm">
+                      {turn.prompt}
+                    </div>
+                  </div>
+                  {turn.reply && (
+                    <div className={`flex items-start gap-3 ${i === visibleTurns.length - 1 ? 'animate-in fade-in slide-in-from-bottom-2 duration-300' : ''}`}>
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-blue-500/30">
+                        <Sparkles size={12} className="text-white" />
+                      </div>
+                      <div className="max-w-[78%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed bg-accent border border-border text-foreground rounded-tl-sm">
+                        {turn.reply}
+                      </div>
                     </div>
                   )}
-                  <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-100 rounded-tr-sm'
-                      : 'bg-accent border border-border text-foreground rounded-tl-sm'
-                  }`}>
-                    {msg.text}
-                  </div>
                 </div>
               ))}
 
-              {/* Typing indicator */}
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-                  <Sparkles size={12} className="text-white" />
+              {isReplyTyping && visibleTurns[visibleTurns.length - 1] && !visibleTurns[visibleTurns.length - 1].reply && (
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
+                    <Sparkles size={12} className="text-white" />
+                  </div>
+                  <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-accent border border-border flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
-                <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-accent border border-border flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Card input bar */}
             <div className="px-6 pb-5">
               <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-accent border border-border">
-                <span className="text-xs text-muted-foreground flex-1">Ask anything...</span>
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <span className="text-xs text-muted-foreground flex-1 truncate">{inputDraft || 'Ask anything...'}</span>
+                <div className={`w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center transition-transform duration-200 ${isSendPulsing ? 'scale-110' : 'scale-100'}`}>
                   <ArrowRight size={11} className="text-white" />
                 </div>
               </div>
@@ -146,7 +253,7 @@ export function HeroSection() {
       </div>
 
       {/* ── Stats Bar ── */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 lg:px-10 pb-20 mt-4">
+      <div className="relative z-10 w-full max-w-[88rem] mx-auto px-6 pb-20 mt-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-border bg-accent/50 backdrop-blur-md">
           {[
             { icon: '🎓', value: '10,000+', label: 'learners', prefix: 'Built for' },
