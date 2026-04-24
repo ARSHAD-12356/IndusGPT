@@ -42,13 +42,13 @@ export function Navbar() {
   return (
     <>
       <nav
-        className={`sticky top-0 mt-2 w-full z-50 transition-all duration-300 ${
+        className={`sticky top-0 mt-0 w-full z-50 transition-all duration-300 ${
           isScrolled 
             ? 'bg-background/80 backdrop-blur-md border-b border-border shadow-sm' 
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-[88rem] mx-auto px-6 h-20 pt-1 flex items-center justify-between relative">
+        <div className="max-w-[88rem] mx-auto px-6 h-20 flex items-center justify-between relative">
           
           {/* LEFT: Logo */}
           <div className="flex items-center shrink-0">

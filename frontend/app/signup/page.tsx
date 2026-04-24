@@ -29,7 +29,7 @@ export default function SignupPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                setError(data.error || 'Signup failed')
+                setError(data.details ? `${data.error}: ${data.details}` : (data.error || 'Signup failed'))
                 setIsLoading(false)
                 return
             }

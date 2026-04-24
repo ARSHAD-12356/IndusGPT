@@ -21,7 +21,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ chats }, { status: 200 });
     } catch (error) {
         console.error('GET /api/chats error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }
 
@@ -40,6 +40,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ chat: { _id: chat._id, name: chat.name } }, { status: 201 });
     } catch (error) {
         console.error('POST /api/chats error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }

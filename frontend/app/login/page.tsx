@@ -28,7 +28,7 @@ export default function LoginPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                setError(data.error || 'Login failed')
+                setError(data.details ? `${data.error}: ${data.details}` : (data.error || 'Login failed'))
                 setIsLoading(false)
                 return
             }

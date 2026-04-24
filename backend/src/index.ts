@@ -49,10 +49,10 @@ app.get("/api/health", (req: Request, res: Response) => {
 // AI CHAT ENDPOINT (OPENROUTER)
 // =====================
 app.post("/api/chat", async (req: Request, res: Response) => {
-    const { message, image, history } = req.body;
+    const { message, images, history } = req.body;
 
-    if (!message && !image && (!history || history.length === 0)) {
-      return res.status(400).json({ error: "Message, image or history is required" });
+    if (!message && (!images || images.length === 0) && (!history || history.length === 0)) {
+      return res.status(400).json({ error: "Message, images or history is required" });
     }
 
     const lowerMsg = (message || "").toLowerCase().trim();
@@ -101,7 +101,13 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         if (history && Array.isArray(history)) {
             // Only take the last 10 messages to keep context window manageable
             const limitedHistory = history.slice(-10).map((msg: any) => {
-                if (msg.image) {
+                if (msg.images && Array.isArray(msg.images) && msg.images.length > 0) {
+                    const content = [{ type: "text", text: msg.content || "" }];
+                    msg.images.forEach((imgUrl: string) => {
+                        content.push({ type: "image_url", image_url: { url: imgUrl } } as any);
+                    });
+                    return { role: msg.role, content };
+                } else if (msg.image) {
                     return {
                         role: msg.role,
                         content: [
@@ -116,14 +122,12 @@ app.post("/api/chat", async (req: Request, res: Response) => {
         }
 
         // Add current message
-        if (image) {
-            messages.push({
-                role: "user",
-                content: [
-                    { type: "text", text: message || "Analyze this image" },
-                    { type: "image_url", image_url: { url: image } }
-                ]
+        if (images && Array.isArray(images) && images.length > 0) {
+            const content = [{ type: "text", text: message || "Analyze these images" }];
+            images.forEach((imgUrl: string) => {
+                content.push({ type: "image_url", image_url: { url: imgUrl } } as any);
             });
+            messages.push({ role: "user", content });
         } else if (message) {
             messages.push({ role: "user", content: message });
         }

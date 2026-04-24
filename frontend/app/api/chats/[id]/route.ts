@@ -3,9 +3,9 @@ import dbConnect from '@/lib/mongodb';
 import Chat from '@/lib/models/Chat';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     try {
         await dbConnect();
-        const { id } = await params;
 
         const chat = await Chat.findById(id).lean();
 
@@ -15,15 +15,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         return NextResponse.json({ chat }, { status: 200 });
     } catch (error) {
-        console.error(`GET /api/chats/${params?.id} error:`, error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error(`GET /api/chats/${id} error:`, error);
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     try {
         await dbConnect();
-        const { id } = await params;
         const body = await req.json();
 
         const updateData: any = {};
@@ -46,15 +46,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         return NextResponse.json({ chat }, { status: 200 });
     } catch (error) {
-        console.error(`PUT /api/chats error:`, error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error(`PUT /api/chats/${id} error:`, error);
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     try {
         await dbConnect();
-        const { id } = await params;
 
         const chat = await Chat.findByIdAndDelete(id);
 
@@ -64,7 +64,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
-        console.error(`DELETE /api/chats error:`, error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error(`DELETE /api/chats/${id} error:`, error);
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }

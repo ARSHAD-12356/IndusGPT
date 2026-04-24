@@ -18,8 +18,13 @@ async function dbConnect() {
             serverSelectionTimeoutMS: 5000,
         };
 
+        console.log("Attempting to connect to MongoDB...");
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+            console.log("Successfully connected to MongoDB");
             return mongoose;
+        }).catch((err) => {
+            console.error("MongoDB connection failed:", err);
+            throw err;
         });
     }
     cached.conn = await cached.promise;

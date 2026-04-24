@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Play, MessageSquare, Sparkles, Zap } from 'lucide-react'
 import { AnimatedWord } from './animated-headline'
@@ -31,6 +31,17 @@ export function HeroSection() {
   const [visibleTurns, setVisibleTurns] = useState<Array<{ prompt: string; reply: string }>>([])
   const [isReplyTyping, setIsReplyTyping] = useState(false)
   const [isSendPulsing, setIsSendPulsing] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+    }
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [visibleTurns, isReplyTyping])
 
   useEffect(() => {
     let isCancelled = false
@@ -123,13 +134,13 @@ export function HeroSection() {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[900px] h-[300px] bg-indigo-600/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* ── TWO-COLUMN HERO ── */}
-      <div className="relative z-10 w-full max-w-[88rem] mx-auto px-4 lg:px-6 pt-16 lg:pt-20 pb-10 flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-14">
+      <div className="relative z-10 w-full max-w-[88rem] mx-auto px-4 lg:px-6 pt-16 lg:pt-10 pb-10 flex flex-col lg:flex-row lg:items-center lg:gap-16 gap-14">
 
         {/* ── LEFT: Content ── */}
         <div className="flex-1 flex flex-col items-start text-left max-w-xl">
 
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-accent/50 backdrop-blur-sm text-xs text-muted-foreground mb-8">
+          <div className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-accent/50 backdrop-blur-sm text-xs text-muted-foreground mb-5">
             <Zap size={12} className="text-blue-500" />
             <span>Powered by advanced multi-role AI models</span>
           </div>
@@ -204,7 +215,10 @@ export function HeroSection() {
             </div>
 
             {/* Chat messages */}
-            <div className="h-[300px] overflow-hidden flex flex-col gap-3.5 p-6">
+            <div 
+              ref={scrollContainerRef}
+              className="h-[300px] overflow-y-auto scrollbar-hide flex flex-col gap-3.5 p-6"
+            >
               {visibleTurns.map((turn, i) => (
                 <div key={`${turn.prompt}-${i}`} className="flex flex-col gap-3.5 transition-all duration-500">
                   <div className={`flex items-start gap-3 flex-row-reverse ${i === visibleTurns.length - 1 ? 'animate-in fade-in slide-in-from-bottom-2 duration-300' : ''}`}>

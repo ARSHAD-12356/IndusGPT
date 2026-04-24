@@ -50,7 +50,7 @@ export default function Dashboard() {
     const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false)
     const [chatIdToDelete, setChatIdToDelete] = useState<string | null>(null)
     const [isArchivedOpen, setIsArchivedOpen] = useState(false)
-    const [pastedImage, setPastedImage] = useState<string | null>(null)
+    const [pastedImages, setPastedImages] = useState<string[]>([])
 
     const openSettings = (tab: string) => {
         setSettingsActiveTab(tab)
@@ -118,7 +118,7 @@ export default function Dashboard() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
                         message: userMsg.content, 
-                        image: userMsg.image,
+                        images: userMsg.images,
                         history: messages.slice(0, userMsgIdx) // Send history before this prompt
                     }),
                 }
@@ -197,7 +197,7 @@ export default function Dashboard() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
                         message: editMsgText, 
-                        image: updated[idx].image,
+                        images: updated[idx].images,
                         history: updated.slice(0, idx) 
                     }),
                 }
@@ -383,7 +383,7 @@ export default function Dashboard() {
     }
 
     const handleSendMessage = async () => {
-        if (!message.trim()) return
+        if (!message.trim() && pastedImages.length === 0) return
 
         let userMsg = message.trim()
         if (activeMode === 'thinking') {
@@ -416,10 +416,12 @@ export default function Dashboard() {
             }
         }
 
-        const newMessages: { role: 'user' | 'assistant', content: string, image?: string }[] = [...messages, { role: 'user', content: userMsg, image: pastedImage || undefined }]
+        const currentPastedImages = [...pastedImages]
+        const currentMessages = [...messages]
+        const newMessages: { role: 'user' | 'assistant', content: string, images?: string[] }[] = [...messages, { role: 'user', content: userMsg, images: currentPastedImages.length > 0 ? currentPastedImages : undefined }]
         setMessages(newMessages)
         setMessage('')
-        setPastedImage(null)
+        setPastedImages([])
         setHasStarted(true)
         setIsTyping(true)
         const startTime = Date.now()
@@ -486,8 +488,8 @@ export default function Dashboard() {
                         },
                         body: JSON.stringify({ 
                             message: userMsg, 
-                            image: pastedImage,
-                            history: messages // Send previous messages as history
+                            images: currentPastedImages,
+                            history: currentMessages // Send previous messages as history
                         }),
                     }
                 );
@@ -516,7 +518,7 @@ export default function Dashboard() {
             }
         } catch (error: any) {
             console.error("Backend API Error:", error)
-            const errorMessages: { role: 'user' | 'assistant', content: string, image?: string }[] = [...newMessages, {
+            const errorMessages: { role: 'user' | 'assistant', content: string, images?: string[] }[] = [...newMessages, {
                 role: 'assistant',
                 content: error.message || "Something went wrong"
             }]
@@ -576,7 +578,7 @@ export default function Dashboard() {
                     const ctx = canvas.getContext('2d');
                     ctx?.drawImage(img, 0, 0, width, height);
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    setPastedImage(dataUrl);
+                    setPastedImages(prev => [...prev, dataUrl]);
                 };
                 img.src = event.target?.result as string;
             };
@@ -620,7 +622,7 @@ export default function Dashboard() {
                             const ctx = canvas.getContext('2d');
                             ctx?.drawImage(img, 0, 0, width, height);
                             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                            setPastedImage(dataUrl);
+                            setPastedImages(prev => [...prev, dataUrl]);
                         };
                         img.src = event.target?.result as string;
                     };
@@ -636,17 +638,14 @@ export default function Dashboard() {
         setIsMobileSidebarOpen(false);
         setSearchQuery('');
         setIsSearchOpen(false);
+        setHasStarted(true);
 
         // Use cached messages if available for instant display
         if (chat.messages && chat.messages.length > 0) {
             setMessages(chat.messages);
-            setHasStarted(true);
         } else {
             // If no cached messages, we'll fetch them.
-            // We don't setHasStarted(true) yet because it might be an empty chat.
-            // But we SHOULD clear the current messages so we don't show the previous chat's messages.
             setMessages([]);
-            setHasStarted(false);
         }
 
         try {
@@ -1257,20 +1256,24 @@ export default function Dashboard() {
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
                                     <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-2xl min-h-[120px] transition-all">
-                                        {pastedImage && (
-                                            <div className="relative ml-4 mt-4 group/image shrink-0 overflow-visible" style={{ width: '56px', height: '56px' }}>
-                                                <img 
-                                                    src={pastedImage} 
-                                                    alt="Pasted" 
-                                                    className="w-full h-full object-cover rounded-xl border border-border shadow-sm" 
-                                                />
-                                                <button 
-                                                    onClick={() => setPastedImage(null)}
-                                                    className="absolute w-5 h-5 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
-                                                    style={{ top: '-8px', right: '-8px' }}
-                                                >
-                                                    <X size={10} />
-                                                </button>
+                                        {pastedImages.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 ml-4 mt-4 shrink-0">
+                                                {pastedImages.map((img, idx) => (
+                                                    <div key={idx} className="relative group/image overflow-visible" style={{ width: '56px', height: '56px' }}>
+                                                        <img 
+                                                            src={img} 
+                                                            alt={`Pasted ${idx}`} 
+                                                            className="w-full h-full object-cover rounded-xl border border-border shadow-sm" 
+                                                        />
+                                                        <button 
+                                                            onClick={() => setPastedImages(prev => prev.filter((_, i) => i !== idx))}
+                                                            className="absolute w-5 h-5 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
+                                                            style={{ top: '-8px', right: '-8px' }}
+                                                        >
+                                                            <X size={10} />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
                                         {activeMode !== 'normal' && (
@@ -1367,8 +1370,8 @@ export default function Dashboard() {
                                             </button>
                                             <button
                                                 onClick={handleSendMessage}
-                                                disabled={!message.trim() && !pastedImage}
-                                                className={`p-2 rounded-xl transition-all ${message.trim() || pastedImage ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95' : 'bg-accent text-muted-foreground cursor-not-allowed'}`}
+                                                disabled={!message.trim() && pastedImages.length === 0}
+                                                className={`p-2 rounded-xl transition-all ${message.trim() || pastedImages.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95' : 'bg-accent text-muted-foreground cursor-not-allowed'}`}
                                             >
                                                 <Send size={18} />
                                             </button>
@@ -1403,9 +1406,13 @@ export default function Dashboard() {
                                     >
                                             <div className={`flex ${msg.role === 'user' ? 'flex-row-reverse items-end' : 'flex-col'} gap-2`}>
                                                 <div className={`w-fit max-w-[85%] ${msg.role === 'user' ? 'bg-secondary/80 text-foreground rounded-2xl rounded-tr-none' : 'bg-accent border border-border text-foreground rounded-2xl rounded-tl-none'} px-4 py-3 shadow-sm relative`}>
-                                                {msg.image && (
-                                                    <div className="mb-2 max-w-sm">
-                                                        <img src={msg.image} alt="Message attachment" className="rounded-lg w-full h-auto border border-white/5 shadow-lg" />
+                                                {msg.images && msg.images.length > 0 && (
+                                                    <div className="mb-3 flex flex-wrap gap-2 max-w-xl">
+                                                        {msg.images.map((img, i) => (
+                                                            <div key={i} className="max-w-[200px] group/msgimg relative">
+                                                                <img src={img} alt={`Attachment ${i}`} className="rounded-lg w-full h-auto border border-white/5 shadow-lg" />
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 )}
                                                 {editingMsgIdx === idx ? (
@@ -1560,20 +1567,24 @@ export default function Dashboard() {
                             <div className={`fixed bottom-0 left-0 right-0 transition-all duration-300 bg-background/80 backdrop-blur-xl border-t border-border p-3 lg:p-4 z-20 ${isSidebarOpen ? 'lg:left-[260px]' : 'lg:left-[68px]'}`}>
                                 <div className="max-w-3xl mx-auto relative group">
                                     <div className="relative flex flex-col bg-card border border-border rounded-2xl shadow-xl transition-all">
-                                        {pastedImage && (
-                                            <div className="relative ml-3 mt-3 group/image shrink-0 overflow-visible" style={{ width: '48px', height: '48px' }}>
-                                                <img 
-                                                    src={pastedImage} 
-                                                    alt="Pasted" 
-                                                    className="w-full h-full object-cover rounded-lg border border-border shadow-sm" 
-                                                />
-                                                <button 
-                                                    onClick={() => setPastedImage(null)}
-                                                    className="absolute w-4 h-4 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
-                                                    style={{ top: '-6px', right: '-6px' }}
-                                                >
-                                                    <X size={8} />
-                                                </button>
+                                        {pastedImages.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 ml-3 mt-3 shrink-0">
+                                                {pastedImages.map((img, idx) => (
+                                                    <div key={idx} className="relative group/image overflow-visible" style={{ width: '48px', height: '48px' }}>
+                                                        <img 
+                                                            src={img} 
+                                                            alt={`Pasted ${idx}`} 
+                                                            className="w-full h-full object-cover rounded-lg border border-border shadow-sm" 
+                                                        />
+                                                        <button 
+                                                            onClick={() => setPastedImages(prev => prev.filter((_, i) => i !== idx))}
+                                                            className="absolute w-4 h-4 bg-white border border-border rounded-full flex items-center justify-center text-black shadow-lg hover:bg-gray-100 transition-all z-30"
+                                                            style={{ top: '-6px', right: '-6px' }}
+                                                        >
+                                                            <X size={8} />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
                                         {activeMode !== 'normal' && (
