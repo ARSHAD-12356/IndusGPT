@@ -1,6 +1,29 @@
 'use client'
 
+import { motion, Variants } from 'framer-motion'
 import { MessageSquare, Code2, BarChart3, FileText } from 'lucide-react'
+
+const container: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+}
 
 const FEATURES = [
   {
@@ -45,7 +68,13 @@ export function FeaturesSection() {
 
       <div className="relative z-10 max-w-[88rem] mx-auto px-6">
         {/* Section header */}
-        <div className="text-center mb-16">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
           <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">
             What can you do with{' '}
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -53,12 +82,19 @@ export function FeaturesSection() {
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">Everything you need, all in one platform.</p>
-        </div>
+        </motion.div>
 
         {/* Feature cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.div 
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
           {FEATURES.map((f) => (
-            <div
+            <motion.div
+              variants={item}
               key={f.title}
               className={`group relative flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-border bg-card/50 hover:bg-accent backdrop-blur-sm shadow-xl transition-all duration-300 cursor-default overflow-hidden ${f.glow} hover:shadow-2xl ${f.border}`}
             >
@@ -75,9 +111,9 @@ export function FeaturesSection() {
                 <h3 className="text-lg font-semibold text-foreground mb-3">{f.title}</h3>
                 <p className="text-base text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

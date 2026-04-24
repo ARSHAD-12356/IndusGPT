@@ -1,6 +1,29 @@
 'use client'
 
+import { motion, Variants } from 'framer-motion'
 import { MessageSquare, Brain, Zap, ArrowRight } from 'lucide-react'
+
+const container: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15
+    }
+  }
+}
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut" 
+    } 
+  }
+}
 
 const STEPS = [
   {
@@ -34,7 +57,13 @@ export function HowItWorksSection() {
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
           <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">
             How It Works
           </h2>
@@ -43,14 +72,23 @@ export function HowItWorksSection() {
             <span className="text-foreground font-semibold italic">one</span>{' '}
             platform.
           </p>
-        </div>
+        </motion.div>
 
         {/* Steps */}
-        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-0">
+        <motion.div 
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-0"
+        >
           {STEPS.map((step, i) => (
             <div key={step.title} className="flex flex-col lg:flex-row items-center flex-1">
               {/* Card */}
-              <div className="group flex-1 w-full flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-border bg-card/50 hover:bg-accent backdrop-blur-sm transition-all duration-300 hover:border-border/80 relative overflow-hidden">
+              <motion.div 
+                variants={item}
+                className="group flex-1 w-full flex flex-col gap-6 p-8 min-h-[260px] rounded-2xl border border-border bg-card/50 hover:bg-accent backdrop-blur-sm transition-all duration-300 hover:border-border/80 relative overflow-hidden"
+              >
                 {/* Step number - subtle background */}
                 <span className="absolute top-4 right-5 text-6xl font-black text-foreground/[0.04] select-none leading-none">{step.step}</span>
 
@@ -64,20 +102,26 @@ export function HowItWorksSection() {
                   <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
                   <p className="text-base text-muted-foreground leading-relaxed">{step.desc}</p>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Connector arrow */}
               {i < STEPS.length - 1 && (
-                <div className="flex lg:flex-col items-center justify-center px-4 py-3 lg:py-0 lg:px-6 shrink-0">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.5 + i * 0.2, duration: 0.4 }}
+                  className="flex lg:flex-col items-center justify-center px-4 py-3 lg:py-0 lg:px-6 shrink-0"
+                >
                   <div className="w-8 h-8 rounded-full bg-accent border border-border flex items-center justify-center">
                     <ArrowRight size={14} className="text-blue-500 lg:block hidden" />
                     <ArrowRight size={14} className="text-blue-500 lg:hidden rotate-90" />
                   </div>
-                </div>
+                </motion.div>
               )}
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

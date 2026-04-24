@@ -1,5 +1,6 @@
 'use client'
 
+import { motion, Variants } from 'framer-motion'
 import { Zap, X, Check } from 'lucide-react'
 
 const COMPARISON = [
@@ -34,7 +35,13 @@ export function WhyIndusGPTSection() {
 
       <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-8">
         {/* Header */}
-        <div className="text-center mb-14">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-14"
+        >
           <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 tracking-tight">
             Why{' '}
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -44,10 +51,16 @@ export function WhyIndusGPTSection() {
           <p className="text-muted-foreground text-lg">
             Built for learners, developers, and data minds.
           </p>
-        </div>
+        </motion.div>
 
         {/* Comparison Table */}
-        <div className="rounded-2xl overflow-hidden border border-border bg-card/10">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="rounded-2xl overflow-hidden border border-border bg-card/10"
+        >
           {/* Table header (Hidden on mobile) */}
           <div className="hidden md:grid grid-cols-3 bg-accent border-b border-border">
             <div className="px-8 py-6 text-base font-semibold text-muted-foreground">Others</div>
@@ -95,7 +108,7 @@ export function WhyIndusGPTSection() {
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )
