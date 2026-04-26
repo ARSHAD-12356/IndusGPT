@@ -35,7 +35,7 @@ const STEPS = [
   },
   {
     icon: Brain,
-    title: 'AI understands',
+    title: 'AI analyzes your query',
     desc: 'Our multi-role AI analyzes and understands your query',
     gradient: 'from-purple-500 to-violet-600',
     step: '02',
@@ -51,7 +51,7 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative pt-16 pb-28 bg-background overflow-hidden">
+    <section id="how-it-works" className="relative py-20 md:py-28 bg-gradient-to-b from-white to-purple-50 dark:from-slate-900 dark:to-slate-800 overflow-hidden">
       {/* Decorative background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/10 to-transparent pointer-events-none" />
 

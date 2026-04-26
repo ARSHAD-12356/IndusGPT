@@ -5,7 +5,7 @@ import { ArrowRight, ExternalLink } from 'lucide-react'
 
 export function CTASection() {
   return (
-    <section className="relative py-28 bg-background overflow-hidden">
+    <section className="relative py-20 md:py-28 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
       {/* Background glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-purple-600/8 rounded-full blur-[80px] pointer-events-none" />
@@ -35,7 +35,7 @@ export function CTASection() {
 
         {/* Subtext */}
         <p className="text-muted-foreground text-lg mb-10 max-w-xl leading-relaxed">
-          Built for learners, developers, and data-driven minds.
+          Built for professionals across every industry.
         </p>
 
         {/* CTA Buttons */}

@@ -3,13 +3,11 @@
 import { useEffect, useState } from 'react'
 
 const WORDS = [
-  'Coders',
-  'Data Analysts',
-  'Code Writers',
-  'Doctors',
-  'Youtubers',
+  'Professionals',
   'Engineers',
-  'Programmer',
+  'Doctors',
+  'Analysts',
+  'Creators',
 ]
 
 export function AnimatedWord() {

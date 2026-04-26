@@ -48,7 +48,7 @@ export function Navbar() {
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-[88rem] mx-auto px-6 h-20 flex items-center justify-between relative">
+        <div className="max-w-[88rem] mx-auto px-6 h-20 flex items-center relative">
           
           {/* LEFT: Logo */}
           <div className="flex items-center shrink-0">
@@ -63,7 +63,7 @@ export function Navbar() {
           </div>
 
           {/* CENTER: Navigation Links (Desktop) */}
-          <div className="hidden lg:flex items-center absolute left-1/2 -translate-x-1/2 gap-12">
+          <div className="hidden lg:flex items-center absolute left-[48%] -translate-x-1/2 gap-14">
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
@@ -81,7 +81,7 @@ export function Navbar() {
           </div>
 
           {/* RIGHT: Actions */}
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-4 shrink-0 ml-auto">
             <div className="hidden lg:flex items-center gap-6 mr-2">
               <ModeToggle />
               <Link href="/login" className="text-sm font-semibold text-white px-6 h-11 flex items-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] transition-all">

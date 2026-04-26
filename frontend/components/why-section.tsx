@@ -7,7 +7,7 @@ const COMPARISON = [
   {
     aspect: 'Generic AI',
     others: 'Generic AI',
-    indus: 'AI designed for students, devs & data analysts',
+    indus: 'AI designed for real-world professional workflows',
   },
   {
     aspect: 'Chat only',
@@ -28,7 +28,7 @@ const COMPARISON = [
 
 export function WhyIndusGPTSection() {
   return (
-    <section id="why" className="relative pt-16 pb-28 bg-background overflow-hidden">
+    <section id="why" className="relative py-20 md:py-28 bg-white dark:bg-slate-900 overflow-hidden">
       {/* Background glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
@@ -49,7 +49,7 @@ export function WhyIndusGPTSection() {
             </span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Built for learners, developers, and data minds.
+            Built for professionals across every industry.
           </p>
         </motion.div>
 

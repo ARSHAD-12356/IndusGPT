@@ -3,11 +3,18 @@
 import { motion } from 'framer-motion'
 import { Navbar } from '@/components/navbar'
 import { HeroSection } from '@/components/sections/hero'
-import { FeaturesSection } from '@/components/features-section'
 import { HowItWorksSection } from '@/components/how-it-works-section'
 import { WhyIndusGPTSection } from '@/components/why-section'
 import { CTASection } from '@/components/cta-section'
 import { Footer } from '@/components/footer'
+
+import { SocialProofSection } from '@/components/social-proof'
+import { WhoIsThisForSection } from '@/components/who-is-this-for'
+import { RealUseCasesSection } from '@/components/real-use-cases'
+import { LiveDemoSection } from '@/components/live-demo'
+import { PricingPreviewSection } from '@/components/pricing-preview'
+import { FAQSection } from '@/components/faq-section'
+import { PromoBar } from '@/components/promo-bar'
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -17,20 +24,17 @@ const fadeInUp = {
 export default function Home() {
   return (
     <div className="bg-background">
+      <PromoBar />
       <Navbar />
       <main className="mt-0">
         <HeroSection />
         
-        <motion.div 
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          variants={fadeInUp}
-        >
-          <FeaturesSection />
-        </motion.div>
+        <SocialProofSection />
+
+        <WhoIsThisForSection />
         
+        <RealUseCasesSection />
+
         <motion.div 
           initial="initial"
           whileInView="animate"
@@ -41,6 +45,8 @@ export default function Home() {
           <HowItWorksSection />
         </motion.div>
         
+        <LiveDemoSection />
+
         <motion.div 
           initial="initial"
           whileInView="animate"
@@ -51,6 +57,10 @@ export default function Home() {
           <WhyIndusGPTSection />
         </motion.div>
         
+        <PricingPreviewSection />
+        
+        <FAQSection />
+
         <motion.div 
           initial="initial"
           whileInView="animate"

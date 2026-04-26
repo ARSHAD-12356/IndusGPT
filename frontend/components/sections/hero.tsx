@@ -127,7 +127,7 @@ export function HeroSection() {
   }, [activeStep, MAX_VISIBLE_TURNS])
 
   return (
-    <section className="relative min-h-screen flex flex-col overflow-hidden bg-background">
+    <section className="relative min-h-screen flex flex-col overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Background glow orbs */}
       <div className="absolute top-1/4 left-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[130px] pointer-events-none" />
@@ -154,13 +154,12 @@ export function HeroSection() {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl font-semibold text-foreground/80 mb-3 leading-snug">
-            Solve doubts. Write code. Analyze data —{' '}
-            <span className="text-foreground">all in one place.</span>
+            One AI platform for coding, research, healthcare, engineering, and content creation.
           </p>
 
           {/* Description */}
           <p className="text-sm text-muted-foreground mb-10 leading-relaxed max-w-sm">
-            IndusGPT helps you learn faster, debug smarter, and generate insights instantly.
+            IndusGPT helps you work faster, debug smarter, and generate insights instantly.
           </p>
 
           {/* CTA Buttons */}
@@ -270,7 +269,7 @@ export function HeroSection() {
       <div className="relative z-10 w-full max-w-[88rem] mx-auto px-6 pb-20 mt-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-border bg-accent/50 backdrop-blur-md">
           {[
-            { icon: '🎓', value: '10,000+', label: 'learners', prefix: 'Built for' },
+            { icon: '🎓', value: '10,000+', label: 'professionals', prefix: 'Trusted by' },
             { icon: '⚡', value: '5M+', label: 'prompts run', prefix: '' },
             { icon: '👥', value: '100K+', label: 'users', prefix: '' },
             { icon: '🔄', value: '99.9%', label: 'uptime', prefix: '' },
